@@ -165,6 +165,9 @@ void Raytracer::traverseScene( SceneDagNode* node, Ray3D& ray ) {
 		// Perform intersection.
 		if (node->obj->intersect(ray, _worldToModel, _modelToWorld)) {
 			ray.intersection.mat = node->mat;
+			ray.col = ray.intersection.mat->ambient + 
+						ray.intersection.mat->specular + 
+						ray.intersection.mat->diffuse;
 		}
 	}
 	// Traverse the children.
@@ -256,6 +259,10 @@ void Raytracer::render( int width, int height, Point3D eye, Vector3D view,
 			// shadeRay(ray) to generate pixel colour. 	
 			
 			Ray3D ray;
+			
+			// filling the origin and the direction of the ray
+			ray.origin = imagePlane;
+			ray.dir = imagePlane - eye;
 
 			Colour col = shadeRay(ray); 
 
