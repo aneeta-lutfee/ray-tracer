@@ -81,43 +81,80 @@ bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	// HINT: Remember to first transform the ray into object space  
 	// to simplify the intersection test.
 	
+
+	/* This derivation is taken from http://ray-tracer-concept.blogspot.ca/2011/11/ray-sphere-intersection.html
+	 * r: sphere radius = 1
+	 * c: sphere origin (0,0,0)
+	 * Sphere equation: (x-xc)^2 + (y-yx)^2 + (x-xc)^2 = r^2
+	 * In parametric form: (p-c).(p-c) = r^2 
+	 * 		where p is a point on the sphere and c is the center
+	 * Ray equation in parametric form: p(t) = e + td
+	 * 		e: camera position
+	 * 		d: ray direction
+	 * 		t: unknown
+	 * 
+	 * Replacing ray equation in shpere equation
+	 * 		((e+td)-c).((e+td)-c) - r^2 = 0
+	 * 	==> ((e-c)+td).((e-c)+td) - r^2 = 0
+	 * 	==>	((e-c).(e-c)) + ((e-c)td.(e-c)td) + (td.td) - r^2 = 0
+	 * 	==>	((e-c).(e-c)) + 2d.(e-c)t + t^2(d.d) - r^2 = 0
+	 * 	
+	 * Rewrite the equation as a quadratic formula: at^2 + bt + c = 0
+	 * a = d.d
+	 * b = 2d.(e-c)
+	 * c = (e-c).(e-c) - r^2
+	 * To determine if the ray intersects with the shpere or no
+	 * 		Calculate q = b^2 - 4ac:
+	 * 		if q < 0 ==> No intersection
+	 * 		if q > 0 ==> 2 intersections
+	 *  	if q = 0 ==> 1 intersection
+	 * 
+	 * Roots are: (-b +- sqrt(d))/2a
+	 * 
+	 * */		
+		
+	// Transform direction vector to object space	
+	Vector3D t_dir = worldToModel * ray.dir;
 	
-	// transform the ray into object space
-	ray.dir = worldToModel * ray.dir;
-	ray.origin = worldToModel * ray.origin;
+	// Transform origin point to object space
+	Point3D t_origin = worldToModel * ray.origin;
+	Vector3D t_origin_v = Vector3D(t_origin[0], t_origin[1], t_origin[2]);
+
+	float a = t_dir.dot(t_dir); 
+	float b = (t_dir.dot(t_origin_v));
+	float c = (t_origin_v.dot(t_origin_v)) - 1;
+	float q = pow(b, 2) - (a * c);
 	
-	ray.intersection.t_value = - ray.origin[2] / ray.dir[2];
-	double a = ray.origin[0] + ray.intersection.t_value * ray.dir[0];
-	double b = ray.origin[1] + ray.intersection.t_value * ray.dir[1];
+	float lamda;
 	
-	if (
-		((a <= 0.5) && (a >= -0.5)) &&
-		((b <= 0.5) && (b >= -0.5))
-		)	
+	if (q >= 0) // There is intersection
 	{
-		ray.intersection.point[0] = a; 
-		ray.intersection.point[1] = b;
-		ray.intersection.point[2] = 0;
-		
-		ray.intersection.normal[0] = 0;
-		ray.intersection.normal[1] = 0;
-		ray.intersection.normal[2] = 1;
-		
-		ray.intersection.none = false;
+			// Intersection points 
+			float front_lamda = (-b + sqrt(q)) / (2*a); 
+			float back_lamda = (-b - sqrt(q)) / (2*a);
+			
+			if (front_lamda > 0)
+				lamda = front_lamda;
+			else if (back_lamda > 0)
+				lamda = back_lamda;
+				
+			ray.intersection.t_value  = lamda;
+			ray.intersection.none = false;
+			
+			// intersection point p(lamda) = c + lamda(pw - c)
+			Vector3D intersection_v = t_origin_v + (lamda * t_dir);
+			Point3D intersection_p = Point3D(intersection_v[0], 
+											intersection_v[1],
+											intersection_v[2]);
+											
+			ray.intersection.point = intersection_p;
+			ray.intersection.normal = transNorm(modelToWorld, intersection_v);
 	}
 	
-	//if ()ray_unitsphere_intersection(ray)
-	
-	// put the ray back in world space
-	ray.dir = modelToWorld * ray.dir;
-	ray.origin = modelToWorld * ray.origin;
-	ray.intersection.normal = modelToWorld * ray.intersection.normal;
-	ray.intersection.point = modelToWorld * ray.intersection.point;
-	
+	// put the ray back to world space
 	if (ray.intersection.none)
 		return false;
 	return true;
 	
-	return false;
 }
 

@@ -255,11 +255,11 @@ void Raytracer::render( int width, int height, Point3D eye, Vector3D view,
 			imagePlane[1] = (-double(height)/2 + 0.5 + i)/factor;
 			imagePlane[2] = -1;
 
+						
 			// TODO: Convert ray to world space and call 
 			// shadeRay(ray) to generate pixel colour. 	
 			
-			Ray3D ray;
-			
+			Ray3D ray; //= Ray3D( tOrigin, tDirection );
 			//alanwu: filling the origin and the direction of the ray
 			ray.origin = viewToWorld * (origin);
 			ray.dir = viewToWorld * (imagePlane - origin);
@@ -295,7 +295,7 @@ int main(int argc, char* argv[])
 	Point3D eye(0, 0, 1);
 	Vector3D view(0, 0, -1);
 	Vector3D up(0, 1, 0);
-	double fov = 60;
+	double fov = 60; // This is changed from 60
 
 	// Defines a material for shading.
 	Material gold( Colour(0.3, 0.3, 0.3), Colour(0.75164, 0.60648, 0.22648), 
@@ -312,6 +312,7 @@ int main(int argc, char* argv[])
 	// Add a unit square into the scene with material mat.
 	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &gold );
 	SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &jade );
+//	SceneDagNode* plane1 = raytracer.addObject( new UnitSquare(), &jade );  // Remove: new plane for testing
 	
 	// Apply some transformations to the unit square.
 	double factor1[3] = { 1.0, 2.0, 1.0 };
@@ -324,7 +325,12 @@ int main(int argc, char* argv[])
 	raytracer.translate(plane, Vector3D(0, 0, -7));	
 	raytracer.rotate(plane, 'z', 45); 
 	raytracer.scale(plane, Point3D(0, 0, 0), factor2);
-
+	
+	// Remove: transformations for the new plane
+/*	raytracer.translate(plane1, Vector3D(-4, 0, -7));	
+	raytracer.rotate(plane1, 'z', 45); 
+	raytracer.scale(plane1, Point3D(0, 0, 0), factor2);
+*/
 	// Render the scene, feel free to make the image smaller for
 	// testing purposes.	
 	raytracer.render(width, height, eye, view, up, fov, "view1.bmp");
