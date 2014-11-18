@@ -260,9 +260,9 @@ void Raytracer::render( int width, int height, Point3D eye, Vector3D view,
 			
 			Ray3D ray;
 			
-			// filling the origin and the direction of the ray
-			ray.origin = imagePlane;
-			ray.dir = imagePlane - eye;
+			//alanwu: filling the origin and the direction of the ray
+			ray.origin = viewToWorld * (origin);
+			ray.dir = viewToWorld * (imagePlane - origin);
 
 			Colour col = shadeRay(ray); 
 
