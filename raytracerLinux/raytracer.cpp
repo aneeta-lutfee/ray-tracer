@@ -270,7 +270,7 @@ void Raytracer::render( int width, int height, Point3D eye, Vector3D view,
 					//alanwu: filling the origin and the direction of the ray
 					ray.origin = viewToWorld * (origin);
 					ray.dir = viewToWorld * (imagePlane - origin);
-
+				
 					// gets back a color
 					Colour col = shadeRay(ray); 
 					
@@ -353,10 +353,11 @@ int main(int argc, char* argv[])
 	raytracer.scale(plane, Point3D(0, 0, 0), factor2);
 	
 	// Remove: transformations for the new plane
-/*	raytracer.translate(plane1, Vector3D(-4, 0, -7));	
+#if 0
+	raytracer.translate(plane1, Vector3D(-4, 0, -7));	
 	raytracer.rotate(plane1, 'z', 45); 
 	raytracer.scale(plane1, Point3D(0, 0, 0), factor2);
-*/
+#endif
 	// Render the scene, feel free to make the image smaller for
 	// testing purposes.	
 	raytracer.render(width, height, eye, view, up, fov, "view1.bmp");
