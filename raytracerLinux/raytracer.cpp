@@ -239,7 +239,11 @@ void Raytracer::render( int width, int height, Point3D eye, Vector3D view,
 	Matrix4x4 viewToWorld;
 	_scrWidth = width;
 	_scrHeight = height;
+	double subPixel = 3;
 	double factor = (double(height)/2)/tan(fov*M_PI/360.0);
+	double accumulate_red; // Colour accumulator for RGB
+	double accumulate_green; // Colour accumulator for RGB
+	double accumulate_blue; // Colour accumulator for RGB
 
 	initPixelBuffer();
 	viewToWorld = initInvViewMatrix(eye, view, up);
@@ -247,28 +251,53 @@ void Raytracer::render( int width, int height, Point3D eye, Vector3D view,
 	// Construct a ray for each pixel.
 	for (int i = 0; i < _scrHeight; i++) {
 		for (int j = 0; j < _scrWidth; j++) {
-			// Sets up ray origin and direction in view space, 
-			// image plane is at z = -1.
-			Point3D origin(0, 0, 0);
-			Point3D imagePlane;
-			imagePlane[0] = (-double(width)/2 + 0.5 + j)/factor;
-			imagePlane[1] = (-double(height)/2 + 0.5 + i)/factor;
-			imagePlane[2] = -1;
+			// Shoot subPixed^2 rays for each pixel
+			for (double sub_y = 0; sub_y < subPixel; sub_y++) {
+				for (double sub_x = 0; sub_x < subPixel; sub_x++) {
+					// Sets up ray origin and direction in view space, 
+					// image plane is at z = -1.
+					Point3D origin(0, 0, 0);
+					Point3D imagePlane;
+					
+					double sub_xx = double(1)/double(subPixel*2) + sub_x * double(1)/double(subPixel);
+					double sub_yy = double(1)/double(subPixel*2) + sub_y * double(1)/double(subPixel);	
+					imagePlane[0] = (-double(width)/2 + sub_xx + j)/factor;
+					imagePlane[1] = (-double(height)/2 + sub_yy + i)/factor;
+					imagePlane[2] = -1;
 
-						
-			// TODO: Convert ray to world space and call 
-			// shadeRay(ray) to generate pixel colour. 	
+								
+					// TODO: Convert ray to world space and call 
+					// shadeRay(ray) to generate pixel colour. 	
+					
+					Ray3D ray; //= Ray3D( tOrigin, tDirection );
+					//alanwu: filling the origin and the direction of the ray
+					ray.origin = viewToWorld * (origin);
+					ray.dir = viewToWorld * (imagePlane - origin);
+
+					// gets back a color
+					Colour col = shadeRay(ray); 
+					
+					// accumulate that stores outside the loop
+					// accumulate separately for each color
+					if (sub_y == 0 && sub_x == 0) {
+						accumulate_red = col[0];
+						accumulate_green = col[1];
+						accumulate_blue = col[2];
+					}
+					else {
+						accumulate_red = accumulate_red + col[0];
+						accumulate_green = accumulate_green + col[1];
+						accumulate_blue = accumulate_blue + col[2];
+					}
+				}
+			}
 			
-			Ray3D ray; //= Ray3D( tOrigin, tDirection );
-			//alanwu: filling the origin and the direction of the ray
-			ray.origin = viewToWorld * (origin);
-			ray.dir = viewToWorld * (imagePlane - origin);
-
-			Colour col = shadeRay(ray); 
-
-			_rbuffer[i*width+j] = int(col[0]*255);
-			_gbuffer[i*width+j] = int(col[1]*255);
-			_bbuffer[i*width+j] = int(col[2]*255);
+			// Divide the colors by the number of subpixels
+			double col_factor = double(1)/double(pow(subPixel, 2));
+			
+			_rbuffer[i*width+j] = int(accumulate_red*col_factor*255);
+			_gbuffer[i*width+j] = int(accumulate_green*col_factor*255);
+			_bbuffer[i*width+j] = int(accumulate_blue*col_factor*255);
 		}
 	}
 

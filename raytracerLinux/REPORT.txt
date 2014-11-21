@@ -1,0 +1,3 @@
+Shpere intersection, used notes from textbook page 77 (Ray-shpere intersection) and  http://ray-tracer-concept.blogspot.ca/2011/11/ray-sphere-intersection.html
+
+Anti-aliasing: used notes from textbook page 180
