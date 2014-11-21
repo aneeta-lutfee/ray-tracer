@@ -165,9 +165,6 @@ void Raytracer::traverseScene( SceneDagNode* node, Ray3D& ray ) {
 		// Perform intersection.
 		if (node->obj->intersect(ray, _worldToModel, _modelToWorld)) {
 			ray.intersection.mat = node->mat;
-			ray.col = ray.intersection.mat->ambient + 
-						ray.intersection.mat->specular + 
-						ray.intersection.mat->diffuse;
 		}
 	}
 	// Traverse the children.

@@ -68,7 +68,6 @@ bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	return true;
 }
 
-
 bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 		const Matrix4x4& modelToWorld ) {
 	// TODO: implement intersection code for UnitSphere, which is centred 
@@ -116,6 +115,7 @@ bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	// Transform direction vector to object space	
 	Vector3D t_dir = worldToModel * ray.dir;
 	
+
 	// Transform origin point to object space
 	Point3D t_origin = worldToModel * ray.origin;
 	Vector3D t_origin_v = Vector3D(t_origin[0], t_origin[1], t_origin[2]);
@@ -155,6 +155,5 @@ bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	if (ray.intersection.none)
 		return false;
 	return true;
-	
 }
 
