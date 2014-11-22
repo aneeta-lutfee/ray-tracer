@@ -11,6 +11,11 @@
 #include <cmath>
 #include "light_source.h"
 
+// Enums for rendering mode
+enum RenderMode {Phong, Signature, DiffuseAndAmibient};
+
+RenderMode my_render_mode = DiffuseAndAmibient;
+
 void PointLight::shade( Ray3D& ray ) {
 	// TODO: implement this function to fill in values for ray.col 
 	// using phong shading.  Make sure your vectors are normalized, and
@@ -29,16 +34,27 @@ void PointLight::shade( Ray3D& ray ) {
     r.normalize();
 	b.normalize();
 	Material * mat  = ray.intersection.mat;
-/*
-	Colour ambient = mat->ambient;
-	Colour difuse = std::max(0.0, n.dot(s)) * mat->diffuse;
-	Colour specular = pow((std::max(0.0, (-d).dot(m))), mat->specular_exp ) * mat->specular;
-	ray.col = ambient + difuse + specular;
-*/	
-	ray.col = mat->ambient * _col_ambient + 
-			std::max(0.0, n.dot(s)) * mat->diffuse * _col_diffuse +
-			pow(std::max(0.0, r.dot(b)), mat->specular_exp) * mat->specular * _col_specular ;
+
+	Colour ambient = mat->ambient * _col_ambient;
+	Colour diffuse = std::max(0.0, n.dot(s)) * mat->diffuse * _col_diffuse;
+	Colour specular = pow(std::max(0.0, r.dot(b)), mat->specular_exp) * mat->specular * _col_specular;
+	
+	switch (my_render_mode)
+	{
+		default:
+		case Phong:
+			ray.col = ambient + diffuse + specular;
+			break;
 			
+		case DiffuseAndAmibient:
+			ray.col = ambient + diffuse;
+			break;
+			
+		case Signature:
+			
+			break;
+	}
+	
 	//clipping
 	if (ray.col[0] > 1)
 	{
