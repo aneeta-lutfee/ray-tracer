@@ -32,10 +32,21 @@ bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	//Vector4D v = Vector4D(ray.dir[0], ray.dir[1], ray.dir[1], 0);
 	
 	// transform the ray into object space
+	
+	
 	ray.dir = worldToModel * ray.dir;
 	ray.origin = worldToModel * ray.origin;
+	double lambda = - ray.origin[2] / ray.dir[2];
 	
-	// set lambda
+	if ((!ray.intersection.none )&&  (lambda> ray.intersection.t_value))
+	{
+		// put the ray back to world coordinates
+		ray.dir = modelToWorld * ray.dir;
+		ray.origin = modelToWorld * ray.origin;
+		return false;
+	}
+    
+
 	ray.intersection.t_value = - ray.origin[2] / ray.dir[2];
 	double a = ray.origin[0] + ray.intersection.t_value * ray.dir[0];
 	double b = ray.origin[1] + ray.intersection.t_value * ray.dir[1];
@@ -125,30 +136,38 @@ bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	float c = (t_origin_v.dot(t_origin_v)) - 1;
 	float q = pow(b, 2) - (a * c);
 	
-	float lamda;
+	float lambda;
 	
 	if (q >= 0) // There is intersection
 	{
-			// Intersection points 
-			float front_lamda = (-b + sqrt(q)) / (2*a); 
-			float back_lamda = (-b - sqrt(q)) / (2*a);
+		// Intersection points 
+		float front_lambda = (-b + sqrt(q)) / (2*a); 
+		float back_lambda = (-b - sqrt(q)) / (2*a);
+		
+		if (front_lambda > 0)
+			lambda = front_lambda;
+		else if (back_lambda > 0)
+			lambda = back_lambda;
+
+		if ((!ray.intersection.none )&&  (lambda> ray.intersection.t_value))
+		{
+			// put the ray back to world coordinates
+			ray.dir = modelToWorld * ray.dir;
+			ray.origin = modelToWorld * ray.origin;
+			return false;
+		}	
+		ray.intersection.t_value  = lambda;
+		ray.intersection.none = false;
+		
+		// intersection point p(lambda) = c + lambda(pw - c)
+		Vector3D intersection_v = t_origin_v + (lambda * t_dir);
+		Point3D intersection_p = Point3D(intersection_v[0], 
+										intersection_v[1],
+										intersection_v[2]);
+										
+		ray.intersection.point = modelToWorld * intersection_p;
+		ray.intersection.normal = transNorm(modelToWorld, intersection_v);
 			
-			if (front_lamda > 0)
-				lamda = front_lamda;
-			else if (back_lamda > 0)
-				lamda = back_lamda;
-				
-			ray.intersection.t_value  = lamda;
-			ray.intersection.none = false;
-			
-			// intersection point p(lamda) = c + lamda(pw - c)
-			Vector3D intersection_v = t_origin_v + (lamda * t_dir);
-			Point3D intersection_p = Point3D(intersection_v[0], 
-											intersection_v[1],
-											intersection_v[2]);
-											
-			ray.intersection.point = intersection_p;
-			ray.intersection.normal = transNorm(modelToWorld, intersection_v);
 	}
 	
 	// put the ray back to world space
