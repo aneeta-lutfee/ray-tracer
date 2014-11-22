@@ -266,15 +266,14 @@ void Raytracer::render( int width, int height, Point3D eye, Vector3D view,
 					// TODO: Convert ray to world space and call 
 					// shadeRay(ray) to generate pixel colour. 	
 					
-					Ray3D ray; //= Ray3D( tOrigin, tDirection );
+					Ray3D ray;
 					//alanwu: filling the origin and the direction of the ray
 					ray.origin = viewToWorld * (origin);
 					ray.dir = viewToWorld * (imagePlane - origin);
-				
-					// gets back a color
+
+					// Get back a color
 					Colour col = shadeRay(ray); 
 					
-					// accumulate that stores outside the loop
 					// accumulate separately for each color
 					if (sub_y == 0 && sub_x == 0) {
 						accumulate_red = col[0];
@@ -292,6 +291,7 @@ void Raytracer::render( int width, int height, Point3D eye, Vector3D view,
 			// Divide the colors by the number of subpixels
 			double col_factor = double(1)/double(pow(subPixel, 2));
 			
+			// Fill up the rgb buffer
 			_rbuffer[i*width+j] = int(accumulate_red*col_factor*255);
 			_gbuffer[i*width+j] = int(accumulate_green*col_factor*255);
 			_bbuffer[i*width+j] = int(accumulate_blue*col_factor*255);

@@ -32,13 +32,14 @@ bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	//Vector4D v = Vector4D(ray.dir[0], ray.dir[1], ray.dir[1], 0);
 	
 	// transform the ray into object space
-	ray.dir = worldToModel * ray.dir;
-	ray.origin = worldToModel * ray.origin;
+	Vector3D t_dir = worldToModel * ray.dir;
+	Point3D t_origin = worldToModel * ray.origin;
+	Vector3D t_origin_v = Vector3D(t_origin[0], t_origin[1], t_origin[2]);
 	
 	// set lambda
-	ray.intersection.t_value = - ray.origin[2] / ray.dir[2];
-	double a = ray.origin[0] + ray.intersection.t_value * ray.dir[0];
-	double b = ray.origin[1] + ray.intersection.t_value * ray.dir[1];
+	ray.intersection.t_value = - t_origin_v[2] / t_dir[2];
+	double a = t_origin_v[0] + ray.intersection.t_value * t_dir[0];
+	double b = t_origin_v[1] + ray.intersection.t_value * t_dir[1];
 	
 	// determine it there is an intersection
 	if (
@@ -46,10 +47,12 @@ bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 		((b <= 0.5) && (b >= -0.5))
 		)	
 	{
+		// Set intersection point
 		ray.intersection.point[0] = a; 
 		ray.intersection.point[1] = b;
 		ray.intersection.point[2] = 0;
 		
+		// Set intersection normal
 		ray.intersection.normal[0] = 0;
 		ray.intersection.normal[1] = 0;
 		ray.intersection.normal[2] = 1;
@@ -81,7 +84,9 @@ bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	// to simplify the intersection test.
 	
 
-	/* This derivation is taken from http://ray-tracer-concept.blogspot.ca/2011/11/ray-sphere-intersection.html
+	/* This derivation is taken from 
+	 * http://ray-tracer-concept.blogspot.ca/2011/11/ray-sphere-intersection.html
+	 * 
 	 * r: sphere radius = 1
 	 * c: sphere origin (0,0,0)
 	 * Sphere equation: (x-xc)^2 + (y-yx)^2 + (x-xc)^2 = r^2
@@ -146,12 +151,12 @@ bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 			Point3D intersection_p = Point3D(intersection_v[0], 
 											intersection_v[1],
 											intersection_v[2]);
-											
+			
+			// Set intersection point and normal								
 			ray.intersection.point = intersection_p;
 			ray.intersection.normal = transNorm(modelToWorld, intersection_v);
 	}
 	
-	// put the ray back to world space
 	if (ray.intersection.none)
 		return false;
 	return true;
