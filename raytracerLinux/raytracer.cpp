@@ -309,8 +309,13 @@ int main(int argc, char* argv[])
 	// change this if you're just implementing part one of the 
 	// assignment.  
 	Raytracer raytracer;
+#if 0
 	int width = 320; 
 	int height = 240; 
+#else
+	int width = 320/2; 
+	int height = 240/2; 
+#endif
 
 	if (argc == 3) {
 		width = atoi(argv[1]);
