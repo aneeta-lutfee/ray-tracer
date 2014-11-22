@@ -32,18 +32,6 @@ bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	//Vector4D v = Vector4D(ray.dir[0], ray.dir[1], ray.dir[1], 0);
 	
 	// transform the ray into object space
-<<<<<<< HEAD
-	Vector3D t_dir = worldToModel * ray.dir;
-	Point3D t_origin = worldToModel * ray.origin;
-	Vector3D t_origin_v = Vector3D(t_origin[0], t_origin[1], t_origin[2]);
-	
-	// set lambda
-	ray.intersection.t_value = - t_origin_v[2] / t_dir[2];
-	double a = t_origin_v[0] + ray.intersection.t_value * t_dir[0];
-	double b = t_origin_v[1] + ray.intersection.t_value * t_dir[1];
-=======
-	
-	
 	ray.dir = worldToModel * ray.dir;
 	ray.origin = worldToModel * ray.origin;
 	double lambda = - ray.origin[2] / ray.dir[2];
@@ -60,7 +48,6 @@ bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	ray.intersection.t_value = - ray.origin[2] / ray.dir[2];
 	double a = ray.origin[0] + ray.intersection.t_value * ray.dir[0];
 	double b = ray.origin[1] + ray.intersection.t_value * ray.dir[1];
->>>>>>> 8ac36d17bbc6fa25d9a1c59304f27df7240fda6f
 	
 	// determine it there is an intersection
 	if (
