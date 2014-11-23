@@ -92,12 +92,12 @@ bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	// to simplify the intersection test.
 	
 
-	/* This derivation is taken from 
+	/* This derivation is taken from textbook page: 76 and
 	 * http://ray-tracer-concept.blogspot.ca/2011/11/ray-sphere-intersection.html
 	 * 
 	 * r: sphere radius = 1
 	 * c: sphere origin (0,0,0)
-	 * Sphere equation: (x-xc)^2 + (y-yx)^2 + (x-xc)^2 = r^2
+	 * Sphere equation: (x-xc)^2 + (y-yc)^2 + (x-xc)^2 = r^2
 	 * In parametric form: (p-c).(p-c) = r^2 
 	 * 		where p is a point on the sphere and c is the center
 	 * Ray equation in parametric form: p(t) = e + td
@@ -116,51 +116,52 @@ bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	 * b = 2d.(e-c)
 	 * c = (e-c).(e-c) - r^2
 	 * To determine if the ray intersects with the shpere or no
-	 * 		Calculate q = b^2 - 4ac:
+	 * 		Calculate discriminant q = b^2 - 4ac:
 	 * 		if q < 0 ==> No intersection
 	 * 		if q > 0 ==> 2 intersections
 	 *  	if q = 0 ==> 1 intersection
 	 * 
-	 * Roots are: (-b +- sqrt(d))/2a
+	 * Roots are: (-b +- sqrt(d))/a
 	 * 
 	 * */		
 		
+	Point3D sphereOrigin(0,0,0);
+	float lambda;
+	
 	// Transform direction vector to object space	
 	Vector3D t_dir = worldToModel * ray.dir;
 	
-
 	// Transform origin point to object space
 	Point3D t_origin = worldToModel * ray.origin;
-	Vector3D t_origin_v = Vector3D(t_origin[0], t_origin[1], t_origin[2]);
+	Vector3D t_origin_v = Vector3D(t_origin[0] - sphereOrigin[0], 
+								   t_origin[1] - sphereOrigin[1],
+								   t_origin[2] - sphereOrigin[2]);
 
 	float a = t_dir.dot(t_dir); 
 	float b = (t_dir.dot(t_origin_v));
 	float c = (t_origin_v.dot(t_origin_v)) - 1;
 	float q = pow(b, 2) - (a * c);
-	
-	float lambda;
-	
+
 	if (q >= 0) // There is intersection
 	{
 		// Intersection points 
-		float front_lambda = (-b + sqrt(q)) / (2*a); 
-		float back_lambda = (-b - sqrt(q)) / (2*a);
+		float front_lambda = (-b + sqrt(q)) / a; 
+		float back_lambda = (-b - sqrt(q)) / a;
 		
-		if (front_lambda > 0)
-			lambda = front_lambda;
-		else if (back_lambda > 0)
+		lambda = front_lambda;
+		if (back_lambda >= 0)
 			lambda = back_lambda;
+		else 
+			return false;
 
-		if ((!ray.intersection.none )&&  (lambda> ray.intersection.t_value))
+		if ((!ray.intersection.none) && (lambda > ray.intersection.t_value))
 		{
 			// put the ray back to world coordinates
 			ray.dir = modelToWorld * ray.dir;
 			ray.origin = modelToWorld * ray.origin;
 			return false;
 		}	
-		ray.intersection.t_value  = lambda;
-		ray.intersection.none = false;
-		
+
 		// intersection point p(lambda) = c + lambda(pw - c)
 		Vector3D intersection_v = t_origin_v + (lambda * t_dir);
 		Point3D intersection_p = Point3D(intersection_v[0], 
@@ -168,7 +169,12 @@ bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 										intersection_v[2]);
 										
 		ray.intersection.point = modelToWorld * intersection_p;
-		ray.intersection.normal = transNorm(modelToWorld, intersection_v);
+		
+		// The unit normal is (p-c)/R = intersection point
+		ray.intersection.normal = transNorm(worldToModel, intersection_v);
+		ray.intersection.t_value  = lambda;
+		ray.intersection.none = false;
+	
 	}
 	
 	if (ray.intersection.none)
