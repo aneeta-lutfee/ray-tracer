@@ -245,6 +245,8 @@ void Raytracer::render( int width, int height, Point3D eye, Vector3D view,
 	initPixelBuffer();
 	viewToWorld = initInvViewMatrix(eye, view, up);
 
+#if 0 
+//----------- This is the anti-aliasing code -------------------
 	// Construct a ray for each pixel.
 	for (int i = 0; i < _scrHeight; i++) {
 		for (int j = 0; j < _scrWidth; j++) {
@@ -297,6 +299,33 @@ void Raytracer::render( int width, int height, Point3D eye, Vector3D view,
 			_bbuffer[i*width+j] = int(accumulate_blue*col_factor*255);
 		}
 	}
+#else
+// ------------- This is the regular code (no anti-aliasing) -----------
+		// Construct a ray for each pixel.
+	for (int i = 0; i < _scrHeight; i++) {
+		for (int j = 0; j < _scrWidth; j++) {
+			// Sets up ray origin and direction in view space, 
+			// image plane is at z = -1.
+			Point3D origin(0, 0, 0);
+			Point3D imagePlane;
+			imagePlane[0] = (-double(width)/2 + 0.5 + j)/factor;
+			imagePlane[1] = (-double(height)/2 + 0.5 + i)/factor;
+			imagePlane[2] = -1;
+
+	
+			Ray3D ray;
+			//alanwu: filling the origin and the direction of the ray
+			ray.origin = viewToWorld * (origin);
+			ray.dir = viewToWorld * (imagePlane - origin);
+			Colour col = shadeRay(ray); 
+
+			_rbuffer[i*width+j] = int(col[0]*255);
+			_gbuffer[i*width+j] = int(col[1]*255);
+			_bbuffer[i*width+j] = int(col[2]*255);
+		}
+	}
+
+#endif
 
 	flushPixelBuffer(fileName);
 }
