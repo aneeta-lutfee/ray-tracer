@@ -187,7 +187,6 @@ void Raytracer::computeShading( Ray3D& ray ) {
 		// Each lightSource provides its own shading function.
 
 		// Implement shadows here if needed.
-
 		curLight->light->shade(ray);
 		curLight = curLight->next;
 	}
@@ -279,7 +278,7 @@ void Raytracer::render( int width, int height, Point3D eye, Vector3D view,
 					// Get back a color
 					Colour col = shadeRay(ray); 
 					
-					#if 1
+					#if 0
 					// alanwu: Depth of field, initiate multiple rays around this point, and 
 					// average them out
 					Vector3D f_dir = viewToWorld * (imagePlane - origin);
@@ -371,9 +370,18 @@ int main(int argc, char* argv[])
 			Colour(0.316228, 0.316228, 0.316228), 
 			12.8 );
 
+	
+	#if 0
 	// Defines a point light source.
 	raytracer.addLightSource( new PointLight(Point3D(0, 0, 5), 
 				Colour(0.9, 0.9, 0.9) ) );
+	#else
+	srand( time(0) );
+	raytracer.addLightSource( new AreaLight(Point3D(0, 0, 5), 
+				Colour(0.9, 0.9, 0.9), Vector3D(0, 0, -1), 5.0 ) );
+	// Defines a area light source.
+	#endif
+	
 
 	// Add a unit square into the scene with material mat.
 	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &gold );

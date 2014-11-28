@@ -38,3 +38,26 @@ private:
 	Colour _col_diffuse; 
 	Colour _col_specular; 
 };
+
+// A Area light is defined by its position in world space and its
+// colour, as well as it's size.
+class AreaLight : public LightSource {
+public:
+	AreaLight( Point3D pos, Colour col, Vector3D norm,  double radius) : _pos(pos), _col_ambient(col), 
+	_col_diffuse(col), _col_specular(col), _norm(norm), _radius(radius) {}
+	AreaLight( Point3D pos, Colour ambient, Colour diffuse, Colour specular, Vector3D norm,  double radius) 
+	: _pos(pos), _col_ambient(ambient), _col_diffuse(diffuse), 
+	_col_specular(specular), _norm(norm), _radius(radius){}
+	void shade( Ray3D& ray );
+	Point3D get_position() const { return _pos; }
+	Vector3D get_normal() const { return _norm; }
+	double get_radius() const { return _radius; }
+	
+private:
+	Point3D _pos;
+	Vector3D _norm;
+	double _radius;
+	Colour _col_ambient;
+	Colour _col_diffuse; 
+	Colour _col_specular; 
+};
