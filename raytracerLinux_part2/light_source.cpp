@@ -24,10 +24,6 @@ void PointLight::shade( Ray3D& ray ) {
 	// is available.  So be sure that traverseScene() is called on the ray 
 	// before this function.
 	
-	// alanwu: implement shadows
-	// for hard shadows, if object block the ray from intersection to light source, 
-	// only set the color to ambient color of the object.
-	
 	Vector3D n = ray.intersection.normal;
     Vector3D s = _pos - ray.intersection.point;
     Vector3D r = -s+ 2 *(n.dot(s)) * n;
@@ -91,9 +87,6 @@ void AreaLight::shade( Ray3D& ray ) {
 			v[1] = ((double) rand() / (RAND_MAX)) * r;
 			v[2] = -(v[0]*n[0] + v[1]*n[1])/n[2];
 		} while (v.length() > r);
-		//v[0] = _pos[0] + i;
-		//v[1] = _pos[1] + i;
-		//v[2] = _pos[2] + i;
 		light_pos = p + v;
 		// create a new point light at light_pos
 		PointLight pt_light(light_pos, _col_ambient, _col_diffuse, _col_specular);

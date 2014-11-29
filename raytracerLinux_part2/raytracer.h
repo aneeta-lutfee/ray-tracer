@@ -15,6 +15,10 @@
 #include "scene_object.h"
 #include "light_source.h"
 
+// Enums for light type
+enum LightType {Point, Area};
+
+
 // Linked list containing light sources in the scene.
 struct LightListNode {
 	LightListNode() : light(NULL), next(NULL) {}
@@ -25,6 +29,7 @@ struct LightListNode {
 	}
 	LightSource* light;
 	LightListNode* next;
+	LightType type;
 };
 
 // The scene graph, containing objects in the scene.
@@ -85,7 +90,7 @@ public:
 			Material* mat );
 
 	// Add a light source.
-	LightListNode* addLightSource( LightSource* light );
+	LightListNode* addLightSource( LightSource* light);
 
 	// Transformation functions are implemented by right-multiplying 
 	// the transformation matrix to the node's transformation matrix.

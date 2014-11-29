@@ -9,11 +9,11 @@
 ***********************************************************/
 
 #include "util.h"
-
 // Base class for a light source.  You could define different types
 // of lights here, but point light is sufficient for most scenes you
 // might want to render.  Different light sources shade the ray 
 // differently.
+
 class LightSource {
 public:
 	virtual void shade( Ray3D& ) = 0;
@@ -47,12 +47,11 @@ public:
 	_col_diffuse(col), _col_specular(col), _norm(norm), _radius(radius) {}
 	AreaLight( Point3D pos, Colour ambient, Colour diffuse, Colour specular, Vector3D norm,  double radius) 
 	: _pos(pos), _col_ambient(ambient), _col_diffuse(diffuse), 
-	_col_specular(specular), _norm(norm), _radius(radius){}
+	_col_specular(specular), _norm(norm), _radius(radius) {}
 	void shade( Ray3D& ray );
 	Point3D get_position() const { return _pos; }
 	Vector3D get_normal() const { return _norm; }
 	double get_radius() const { return _radius; }
-	
 private:
 	Point3D _pos;
 	Vector3D _norm;
