@@ -26,12 +26,6 @@ bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	Vector3D ray_dir = worldToModel * ray.dir;
 	Point3D ray_origin = worldToModel * ray.origin;
 	double lambda = - ray_origin[2] / ray_dir[2];
-	
-
-	if ((!ray.intersection.none )&&  (lambda> ray.intersection.t_value))
-	{
-		return false;
-	}
 
 	if (lambda >= 0)
 	{
@@ -43,24 +37,26 @@ bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 			((y <= 0.5) && (y >= -0.5))
 			)	
 		{
-			// Set intersection point
-			ray.intersection.point[0] = x; 
-			ray.intersection.point[1] = y;
-			ray.intersection.point[2] = 0;
-			ray.intersection.point = modelToWorld * ray.intersection.point;
-			
-			// Set intersection normal
-			ray.intersection.normal = transNorm(worldToModel, Vector3D(0.0, 0.0, 1.0));
-			
-			// set t_value
-			ray.intersection.t_value = lambda;
-			ray.intersection.none = false;
+			if (ray.intersection.t_value > lambda || ray.intersection.none)
+			{
+				// Set intersection point
+				ray.intersection.point[0] = x; 
+				ray.intersection.point[1] = y;
+				ray.intersection.point[2] = 0;
+				ray.intersection.point = modelToWorld * ray.intersection.point;
+				
+				// Set intersection normal
+				ray.intersection.normal = transNorm(worldToModel, Vector3D(0.0, 0.0, 1.0));
+				ray.intersection.normal.normalize();
+				// set t_value
+				ray.intersection.t_value = lambda;
+				// set intersection
+				ray.intersection.none = false;
+				return true;
+			}
 		}
 	}
-	
-	if (ray.intersection.none)
-		return false;
-	return true;
+	return false;
 }
 #else
 #endif

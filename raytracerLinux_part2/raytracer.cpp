@@ -222,6 +222,7 @@ void Raytracer::computeShading( Ray3D& ray ) {
 	
 	// average out the final colour
 	ray.col = (1.0/counter) * final_col;
+	ray.col.clamp();
 }
 
 void Raytracer::initPixelBuffer() {
@@ -245,20 +246,35 @@ void Raytracer::flushPixelBuffer( char *file_name ) {
 	delete _bbuffer;
 }
 
-Colour Raytracer::shadeRay( Ray3D& ray ) {
+Colour Raytracer::shadeRay( Ray3D& ray , int depth) {
 	Colour col(0.0, 0.0, 0.0); 
-	traverseScene(_root, ray); 
-	
-	// Don't bother shading if the ray didn't hit 
-	// anything.
-	if (!ray.intersection.none) {
-		computeShading(ray); 
-		col = ray.col;  
+	if (depth < 2)
+	{
+		traverseScene(_root, ray); 
+		
+		// Don't bother shading if the ray didn't hit 
+		// anything.
+		if (!ray.intersection.none) {
+			computeShading(ray); 
+			col = ray.col; 
+		}
+			// You'll want to call shadeRay recursively (with a different ray, 
+			// of course) here to implement reflection/refraction effects. 
+			Vector3D d = ray.dir;
+			Vector3D n = ray.intersection.normal;
+			n.normalize();
+			Vector3D reflected_dir =  d - (2.0/ (n.length() * n.length())) * (d.dot(n)) * n; 
+			Ray3D reflection_ray(ray.intersection.point, reflected_dir);
+			traverseScene(_root, reflection_ray);
+			if (!reflection_ray.intersection.none)
+			{
+				col = col + ray.intersection.mat->reflectivity * shadeRay(reflection_ray ,depth + 1);
+				//col = col + shadeRay(reflection_ray ,depth + 1);
+				col.clamp();
+			}
+
+
 	}
-
-	// You'll want to call shadeRay recursively (with a different ray, 
-	// of course) here to implement reflection/refraction effects.  
-
 	return col; 
 }	
 
@@ -309,10 +325,10 @@ void Raytracer::render( int width, int height, Point3D eye, Vector3D view,
 					ray.dir = viewToWorld * (imagePlane - origin);
 
 					// Get back a color
-					Colour col = shadeRay(ray); 
+					Colour col = shadeRay(ray, 0); 
 					//printf("col: %f, %f, %f\n", col[0], col[1], col[2]);
 					
-					#if 0
+#if 0
 					// alanwu: Depth of field, initiate multiple rays around this point, and 
 					// average them out
 					Vector3D f_dir = viewToWorld * (imagePlane - origin);
@@ -332,14 +348,14 @@ void Raytracer::render( int width, int height, Point3D eye, Vector3D view,
 							new_ray.dir = focus_point - viewToWorld * new_ray.origin;
 							new_ray.origin = viewToWorld * new_ray.origin;
 							
-							Colour new_col = shadeRay(new_ray);
+							Colour new_col = shadeRay(new_ray, 0);
 							counter += 1;
 							col = col + new_col;
 						}
 					}
 					// alanwu: average the color
 					col = (1.0/(1+counter)) * col;
-					#endif
+#endif
 					
 					// accumulate separately for each color
 					if (sub_y == 0 && sub_x == 0) {
@@ -362,9 +378,13 @@ void Raytracer::render( int width, int height, Point3D eye, Vector3D view,
 			_rbuffer[i*width+j] = int(accumulate_red*col_factor*255);
 			_gbuffer[i*width+j] = int(accumulate_green*col_factor*255);
 			_bbuffer[i*width+j] = int(accumulate_blue*col_factor*255);
+			
+			// show progress
+			printf("Percentage Complete: %.f\%%           \r", ((i * _scrWidth + j ) * 100.0)/(_scrHeight * _scrWidth));
 		}
+		
 	}
-
+	printf("\nFile Outputed!\n");
 	flushPixelBuffer(fileName);
 }
 
@@ -398,13 +418,10 @@ int main(int argc, char* argv[])
 	// Defines a material for shading.
 	Material gold( Colour(0.3, 0.3, 0.3), Colour(0.75164, 0.60648, 0.22648), 
 			Colour(0.628281, 0.555802, 0.366065), 
-			51.2 );
+			51.2 , 0.7);
 	Material jade( Colour(0, 0, 0), Colour(0.54, 0.89, 0.63), 
 			Colour(0.316228, 0.316228, 0.316228), 
-			12.8 );
-	Material jade2( Colour(0, 0, 0), Colour(0.04, 0.89, 0.63), 
-			Colour(0.16228, 0.316228, 0.316228), 
-			12.8 );
+			12.8 ,0.4);
 
 	
 #if 1
@@ -444,12 +461,12 @@ int main(int argc, char* argv[])
 #endif
 	
 	// Add a unit square into the scene with material mat.
-	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &jade );
-	SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &gold );
+	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &gold );
+	SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &jade );
 //	SceneDagNode* plane1 = raytracer.addObject( new UnitSquare(), &jade );  // Remove: new plane for testing
 	
 	// Apply some transformations to the unit square.
-	double factor1[3] = { 1.0, 2.0, 1.0 };
+	double factor1[3] = { 1.0, 1.3, 1.0 };
 	double factor2[3] = { 6.0, 6.0, 6.0 };
 	raytracer.translate(sphere, Vector3D(0, 0, -5));	
 	raytracer.rotate(sphere, 'x', -45); 
