@@ -248,7 +248,6 @@ void Raytracer::flushPixelBuffer( char *file_name ) {
 
 Colour Raytracer::shadeRay( Ray3D& ray , int depth) {
 	Colour col(0.0, 0.0, 0.0); 
-
 	traverseScene(_root, ray); 
 	
 	// Don't bother shading if the ray didn't hit 
@@ -257,11 +256,11 @@ Colour Raytracer::shadeRay( Ray3D& ray , int depth) {
 		computeShading(ray); 
 		col = ray.col; 
 		
-		if (depth < 3)
+		if (depth < 2)
 		{
 			// You'll want to call shadeRay recursively (with a different ray, 
 			// of course) here to implement reflection/refraction effects. 
-			// No glossy reflection -- regular reflection
+			#if 0 // No glossy reflection -- regular reflection
 			Vector3D d = ray.dir;
 			Vector3D n = ray.intersection.normal;
 			n.normalize();
@@ -269,9 +268,39 @@ Colour Raytracer::shadeRay( Ray3D& ray , int depth) {
 			reflected_dir.normalize(); 
 			Ray3D reflection_ray(ray.intersection.point + 0.00001* reflected_dir, reflected_dir);
 
-			col = col + ray.intersection.mat->reflectivity * shadeRay(reflection_ray ,depth + 1);		
+			col = col + ray.intersection.mat->reflectivity * shadeRay(reflection_ray ,depth + 1);	
+			
+			#else
+			Colour gloss(0,0,0); // glossy reflection
+			for (int i = 0; i < 10; i++) {
+				double delta1 = rand() / (double) RAND_MAX;
+				double delta2 = rand() / (double) RAND_MAX;
+				double theta = acos(pow((1 - delta1), ray.intersection.mat->reflectivity));
+				double phi = 2 * M_PI * delta2;
+				double x = sin(phi) * cos(theta);
+				double y = sin(phi) * sin(theta);
+				double z = cos(phi);
+				
+				Ray3D refRay;
+				Vector3D d = ray.dir;
+				Vector3D n = ray.intersection.normal;
+				n.normalize();
+				Vector3D reflected_dir =  d - (2.0) * (d.dot(n)) * n;
+				reflected_dir.normalize(); 
+				
+				Vector3D u = reflected_dir.cross(ray.intersection.normal);
+				Vector3D v = reflected_dir.cross(u);
+				
+				refRay.dir = x * u + y * v + reflected_dir;
+				refRay.dir.normalize();
+				refRay.origin = ray.origin + 0.00001 * reflected_dir;
+								
+				gloss = gloss + ray.intersection.mat->reflectivity * shadeRay(refRay, depth+1);
+			}
+			col = col +  gloss;
+			#endif				
 		}
-		
+				
 		col.clamp();
 	}
 	return col; 
@@ -417,10 +446,10 @@ int main(int argc, char* argv[])
 	// Defines a material for shading.
 	Material gold( Colour(0.3, 0.3, 0.3), Colour(0.75164, 0.60648, 0.22648), 
 			Colour(0.628281, 0.555802, 0.366065), 
-			51.2 , 0.5);
+			51.2 , 0.0);
 	Material jade( Colour(0, 0, 0), Colour(0.54, 0.89, 0.63), 
 			Colour(0.316228, 0.316228, 0.316228), 
-			12.8 , 0.0);
+			12.8 , 0.5);
 
 	
 #if 1
