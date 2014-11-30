@@ -15,7 +15,7 @@
 #include <time.h>
 
 // Enums for rendering mode
-enum RenderMode {Phong, Signature, DiffuseAndAmibient};
+enum RenderMode {Phong, DiffuseAndAmibient};
 
 RenderMode my_render_mode = Phong;
 
@@ -48,10 +48,6 @@ void PointLight::shade( Ray3D& ray ) {
 			
 		case DiffuseAndAmibient:
 			ray.col = ambient + diffuse;
-			break;
-			
-		case Signature:
-			
 			break;
 	}
 	

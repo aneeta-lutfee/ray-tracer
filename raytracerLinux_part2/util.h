@@ -16,6 +16,18 @@
 #include <iostream>
 #include <cmath>
 
+#define SIGNATURE
+
+#define TEST_IMAGE
+//#define DOF
+//#define SHADOWS
+//#define REFLECTIONS
+//#define MOTION_BLUR
+//#define AREA_LIGHT
+
+#define TIME_DURATION 1
+#define TIME_SLICE 0.1
+
 #ifndef M_PI
 #define M_PI	3.14159265358979323846
 #endif

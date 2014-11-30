@@ -16,6 +16,11 @@
 #include <cmath>
 #include <iostream>
 #include <cstdlib>
+#include "util.h"
+
+Colour ID_1(0,1,0);
+Colour ID_2(0,0,1);
+Colour ID_3(1,0,0);
 
 Raytracer::Raytracer() : _lightSource(NULL) {
 	_root = new SceneDagNode();
@@ -154,7 +159,7 @@ Matrix4x4 Raytracer::initInvViewMatrix( Point3D eye, Vector3D view,
 	return mat; 
 }
 
-void Raytracer::traverseScene( SceneDagNode* node, Ray3D& ray ) {
+void Raytracer::traverseScene( SceneDagNode* node, Ray3D& ray, double time ) {
 	SceneDagNode *childPtr;
 
 	// Applies transformation of the current node to the global
@@ -163,15 +168,15 @@ void Raytracer::traverseScene( SceneDagNode* node, Ray3D& ray ) {
 	_worldToModel = node->invtrans*_worldToModel; 
 	if (node->obj) {
 		// Perform intersection.
-		if (node->obj->intersect(ray, _worldToModel, _modelToWorld)) {
+		if (node->obj->intersect(ray, _worldToModel, _modelToWorld, time)) {
 			ray.intersection.mat = node->mat;
-			//printf("mat: %f, %f, %f\n", ray.intersection.mat->ambient[0],ray.intersection.mat->ambient[1],ray.intersection.mat->ambient[2]);
 		}
+		
 	}
 	// Traverse the children.
 	childPtr = node->child;
 	while (childPtr != NULL) {
-		traverseScene(childPtr, ray);
+		traverseScene(childPtr, ray, time);
 		childPtr = childPtr->next;
 	}
 
@@ -181,7 +186,7 @@ void Raytracer::traverseScene( SceneDagNode* node, Ray3D& ray ) {
 	_modelToWorld = _modelToWorld*node->invtrans;
 }
 
-void Raytracer::computeShading( Ray3D& ray ) {
+void Raytracer::computeShading( Ray3D& ray, double time ) {
 	LightListNode* curLight = _lightSource;
 	
 	// light ray used to collect color from each light source
@@ -197,12 +202,13 @@ void Raytracer::computeShading( Ray3D& ray ) {
 		// alanwu: implement shadows
 		// for hard shadows, if object block the ray from intersection to light source, 
 		// only set the color to ambient color of the object.
+#ifdef SHADOWS
 		Ray3D shadowRay;
 		shadowRay.dir = curLight->light->get_position() - lightRay.intersection.point ;
 		shadowRay.origin = lightRay.intersection.point + 0.0001 * (shadowRay.dir);
 		shadowRay.intersection.none = true;
 		
-		traverseScene(_root, shadowRay); 
+		traverseScene(_root, shadowRay, time); 
 		if (shadowRay.intersection.none)
 		{
 			// shade only if the light shines the intersection
@@ -215,7 +221,11 @@ void Raytracer::computeShading( Ray3D& ray ) {
 			//ray.col = ray.intersection.mat->ambient;
 			final_col = final_col + lightRay.intersection.mat->ambient;
 		}
-
+#else
+	curLight->light->shade(lightRay);
+	final_col = final_col + lightRay.col;
+	
+#endif
 	curLight = curLight->next;
 	counter ++;
 	}
@@ -248,19 +258,30 @@ void Raytracer::flushPixelBuffer( char *file_name ) {
 
 Colour Raytracer::shadeRay( Ray3D& ray , int depth) {
 	Colour col(0.0, 0.0, 0.0); 
-	traverseScene(_root, ray); 
+	
+	double time = TIME_DURATION - TIME_SLICE;
+	int counter = 0;
+	
+#ifdef MOTION_BLUR
+	time = 0.0;
+#endif
+
+for (; time < TIME_DURATION; time+=TIME_SLICE)
+{
+	traverseScene(_root, ray, time); 
 	
 	// Don't bother shading if the ray didn't hit 
 	// anything.
 	if (!ray.intersection.none) {
-		computeShading(ray); 
-		col = ray.col; 
-		
+		computeShading(ray, time); 
+		col = col + ray.col; 
+#ifdef REFLECTIONS	
 		if (depth < 2)
 		{
 			// You'll want to call shadeRay recursively (with a different ray, 
 			// of course) here to implement reflection/refraction effects. 
-			#if 0 // No glossy reflection -- regular reflection
+	#if 1
+			// No glossy reflection -- regular reflection
 			Vector3D d = ray.dir;
 			Vector3D n = ray.intersection.normal;
 			n.normalize();
@@ -270,7 +291,7 @@ Colour Raytracer::shadeRay( Ray3D& ray , int depth) {
 
 			col = col + ray.intersection.mat->reflectivity * shadeRay(reflection_ray ,depth + 1);	
 			
-			#else
+	#else
 			Colour gloss(0,0,0); // glossy reflection
 			for (int i = 0; i < 10; i++) {
 				double delta1 = rand() / (double) RAND_MAX;
@@ -297,12 +318,17 @@ Colour Raytracer::shadeRay( Ray3D& ray , int depth) {
 								
 				gloss = gloss + ray.intersection.mat->reflectivity * shadeRay(refRay, depth+1);
 			}
-			col = col +  gloss;
-			#endif				
+			col = col + gloss;
+	#endif				
 		}
-				
-		col.clamp();
+#endif			
+
+		
 	}
+	counter++;
+}// end of time loop
+	col = (1.0/counter) * col;
+	col.clamp();
 	return col; 
 }	
 
@@ -356,7 +382,7 @@ void Raytracer::render( int width, int height, Point3D eye, Vector3D view,
 					Colour col = shadeRay(ray, 0); 
 					//printf("col: %f, %f, %f\n", col[0], col[1], col[2]);
 					
-#if 0
+#ifdef DOF
 					// alanwu: Depth of field, initiate multiple rays around this point, and 
 					// average them out
 					Vector3D f_dir = viewToWorld * (imagePlane - origin);
@@ -424,12 +450,12 @@ int main(int argc, char* argv[])
 	// change this if you're just implementing part one of the 
 	// assignment.  
 	Raytracer raytracer;
-#if 0
-	int width = 320; 
-	int height = 240; 
-#else
+#ifdef TEST_IMAGE
 	int width = 32 * 4; 
 	int height = 24 * 4; 
+#else
+	int width = 320; 
+	int height = 240; 
 #endif
 
 	if (argc == 3) {
@@ -446,17 +472,14 @@ int main(int argc, char* argv[])
 	// Defines a material for shading.
 	Material gold( Colour(0.3, 0.3, 0.3), Colour(0.75164, 0.60648, 0.22648), 
 			Colour(0.628281, 0.555802, 0.366065), 
-			51.2 , 0.0);
+			51.2 , 0.8);
 	Material jade( Colour(0, 0, 0), Colour(0.54, 0.89, 0.63), 
 			Colour(0.316228, 0.316228, 0.316228), 
-			12.8 , 0.5);
+			12.8 ,0.3);
 
 	
-#if 1
-	// Defines a point light source.
-	raytracer.addLightSource( new PointLight(Point3D(20, 20, 7), 
-				Colour(0.9, 0.9, 0.9) ) );
-#else
+#ifdef AREA_LIGHT
+
 	// Defines an area light source by randomly creating many point
 	// light sources around a center location on a plane to simulate
 	// a disk light panel.
@@ -484,13 +507,40 @@ int main(int argc, char* argv[])
 		PointLight * newlight = new PointLight(light_pos, area_light_col);
 		raytracer.addLightSource(newlight);
 	} 
-	
-	
+#else
+	// Defines a point light source.
+	raytracer.addLightSource( new PointLight(Point3D(0, 0, -2), 
+				Colour(0.9, 0.9, 0.9) ) );
 #endif
 	
+#if 1
+	// Apply some transformations to the unit square.
+	double factor1[3] = { 1.0, 1.0, 1.0 };
+	double factor2[3] = { 1.5, 1.5, 1.5 };
+	double factor3[3] = { 15, 15, 15};
+	
+	// 3 spheres
+	SceneDagNode* plane = raytracer.addObject( new UnitSphere(), &jade );
+	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &gold );
+	SceneDagNode* sphere2 = raytracer.addObject( new UnitSphere(), &gold );
+
+	
+	raytracer.translate(sphere, Vector3D(-3.5, 0, -3.5));	
+	raytracer.rotate(sphere, 'x', -45); 
+	raytracer.rotate(sphere, 'z', 45); 
+	raytracer.scale(sphere, Point3D(0, 0, 0), factor1);
+
+	raytracer.translate(plane, Vector3D(0, 0, -5));	
+	raytracer.rotate(plane, 'z', 45); 
+	raytracer.scale(plane, Point3D(0, 0, 0), factor2);
+	
+	raytracer.translate(sphere2, Vector3D(-6, -7, -20));
+	raytracer.scale(sphere2, Point3D(0, 0, 0), factor3);
+#else
 	// Add a unit square into the scene with material mat.
-	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &jade );
-	SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &gold );
+	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &gold );
+	SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &jade );
+
 //	SceneDagNode* plane1 = raytracer.addObject( new UnitSquare(), &jade );  // Remove: new plane for testing
 	
 	// Apply some transformations to the unit square.
@@ -504,6 +554,7 @@ int main(int argc, char* argv[])
 	raytracer.translate(plane, Vector3D(0, 0, -7));	
 	raytracer.rotate(plane, 'z', 45); 
 	raytracer.scale(plane, Point3D(0, 0, 0), factor2);
+#endif	
 	// Render the scene, feel free to make the image smaller for
 	// testing purposes.	
 	raytracer.render(width, height, eye, view, up, fov, "view1.bmp");

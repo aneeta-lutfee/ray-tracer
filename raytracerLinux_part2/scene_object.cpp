@@ -9,23 +9,28 @@
 ***********************************************************/
 
 #include <cmath>
+#include <cstdlib>
 #include <iostream>
 #include "scene_object.h"
-#if 1
+
 // alanwu
+#if 1
 bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
-		const Matrix4x4& modelToWorld ) {
+		const Matrix4x4& modelToWorld, double time) {
 	// TODO: implement intersection code for UnitSquare, which is
 	// defined on the xy-plane, with vertices (0.5, 0.5, 0), 
 	// (-0.5, 0.5, 0), (-0.5, -0.5, 0), (0.5, -0.5, 0), and normal
 	// (0, 0, 1).
 
 	// ray_objectSpace = worldToModel * (*ray);
-
+	
 	// transform the ray into object space
 	Vector3D ray_dir = worldToModel * ray.dir;
 	Point3D ray_origin = worldToModel * ray.origin;
 	double lambda = - ray_origin[2] / ray_dir[2];
+
+	//double time = double (rand())/(RAND_MAX) * 0.5;
+	time = 0;
 
 	if (lambda >= 0)
 	{
@@ -33,7 +38,7 @@ bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 		double y = ray_origin[1] + lambda * ray_dir[1];
 		// determine it there is an intersection
 		if (
-			((x <= 0.5) && (x >= -0.5)) &&
+			((x <= 0.5 + time) && (x >= -0.5 + time)) &&
 			((y <= 0.5) && (y >= -0.5))
 			)	
 		{
@@ -60,9 +65,8 @@ bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 }
 #else
 #endif
-
 bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
-		const Matrix4x4& modelToWorld ) {
+		const Matrix4x4& modelToWorld, double time ) {
 	// TODO: implement intersection code for UnitSphere, which is centred 
 	// on the origin.  
 	//
@@ -106,9 +110,13 @@ bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	 * Roots are: (-b +- sqrt(d))/a
 	 * 
 	 * */		
-		
-	Point3D sphereOrigin(0,0,0);
+	
+	//double time = double (rand())/(RAND_MAX);
+	//Point3D sphereOrigin(0,0,0);
+	Point3D sphereOrigin(time, 0, 0);
 	float lambda;
+	
+	
 	
 	// Transform direction vector to object space	
 	Vector3D t_dir = worldToModel * ray.dir;
@@ -123,7 +131,7 @@ bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	float b = (t_dir.dot(t_origin_v));
 	float c = (t_origin_v.dot(t_origin_v)) - 1;
 	float q = pow(b, 2) - (a * c);
-
+	
 	if (q >= 0) // There is intersection
 	{
 		// Intersection points 
@@ -156,11 +164,8 @@ bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 		ray.intersection.normal = transNorm(worldToModel, intersection_v);
 		ray.intersection.t_value  = lambda;
 		ray.intersection.none = false;
-	
+		return true;
 	}
-	
-	if (ray.intersection.none)
-		return false;
-	return true;
+	return false;
 }
 

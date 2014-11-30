@@ -36,10 +36,10 @@ struct LightListNode {
 struct SceneDagNode {
 	SceneDagNode() : 
 		obj(NULL), mat(NULL), 
-		next(NULL), parent(NULL), child(NULL) {
+		next(NULL), parent(NULL), child(NULL){
 	}	
 
-	SceneDagNode( SceneObject* obj, Material* mat ) : 
+	SceneDagNode( SceneObject* obj, Material* mat) : 
 		obj(obj), mat(mat), next(NULL), parent(NULL), child(NULL) {
 		}
 	
@@ -123,11 +123,11 @@ private:
 
 	// Traversal code for the scene graph, the ray is transformed into 
 	// the object space of each node where intersection is performed.
-	void traverseScene( SceneDagNode* node, Ray3D& ray );
+	void traverseScene( SceneDagNode* node, Ray3D& ray, double time);
 
 	// After intersection, calculate the colour of the ray by shading it
 	// with all light sources in the scene.
-	void computeShading( Ray3D& ray );
+	void computeShading( Ray3D& ray, double time);
 	
 	// Width and height of the viewport.
 	int _scrWidth;

@@ -17,20 +17,20 @@
 class SceneObject {
 public:
 	// Returns true if an intersection occured, false otherwise.
-	virtual bool intersect( Ray3D&, const Matrix4x4&, const Matrix4x4& ) = 0;
-};
+	virtual bool intersect( Ray3D&, const Matrix4x4&, const Matrix4x4&, double time) = 0;
+ };
 
 // Example primitive you can create, this is a unit square on 
 // the xy-plane.
 class UnitSquare : public SceneObject {
 public:
 	bool intersect( Ray3D& ray, const Matrix4x4& worldToModel,
-			const Matrix4x4& modelToWorld );
+			const Matrix4x4& modelToWorld, double time);
 };
 
 class UnitSphere : public SceneObject {
 public:
 	bool intersect( Ray3D& ray, const Matrix4x4& worldToModel,
-			const Matrix4x4& modelToWorld );
+			const Matrix4x4& modelToWorld, double time );
 };
 
