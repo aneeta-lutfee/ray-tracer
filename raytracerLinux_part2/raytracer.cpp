@@ -248,32 +248,31 @@ void Raytracer::flushPixelBuffer( char *file_name ) {
 
 Colour Raytracer::shadeRay( Ray3D& ray , int depth) {
 	Colour col(0.0, 0.0, 0.0); 
-	if (depth < 2)
-	{
-		traverseScene(_root, ray); 
+
+	traverseScene(_root, ray); 
+	
+	// Don't bother shading if the ray didn't hit 
+	// anything.
+	if (!ray.intersection.none) {
+		computeShading(ray); 
+		col = ray.col; 
 		
-		// Don't bother shading if the ray didn't hit 
-		// anything.
-		if (!ray.intersection.none) {
-			computeShading(ray); 
-			col = ray.col; 
-		}
+		if (depth < 3)
+		{
 			// You'll want to call shadeRay recursively (with a different ray, 
 			// of course) here to implement reflection/refraction effects. 
+			// No glossy reflection -- regular reflection
 			Vector3D d = ray.dir;
 			Vector3D n = ray.intersection.normal;
 			n.normalize();
-			Vector3D reflected_dir =  d - (2.0/ (n.length() * n.length())) * (d.dot(n)) * n; 
-			Ray3D reflection_ray(ray.intersection.point, reflected_dir);
-			traverseScene(_root, reflection_ray);
-			if (!reflection_ray.intersection.none)
-			{
-				col = col + ray.intersection.mat->reflectivity * shadeRay(reflection_ray ,depth + 1);
-				//col = col + shadeRay(reflection_ray ,depth + 1);
-				col.clamp();
-			}
+			Vector3D reflected_dir =  d - (2.0) * (d.dot(n)) * n;
+			reflected_dir.normalize(); 
+			Ray3D reflection_ray(ray.intersection.point + 0.00001* reflected_dir, reflected_dir);
 
-
+			col = col + ray.intersection.mat->reflectivity * shadeRay(reflection_ray ,depth + 1);		
+		}
+		
+		col.clamp();
 	}
 	return col; 
 }	
@@ -418,15 +417,15 @@ int main(int argc, char* argv[])
 	// Defines a material for shading.
 	Material gold( Colour(0.3, 0.3, 0.3), Colour(0.75164, 0.60648, 0.22648), 
 			Colour(0.628281, 0.555802, 0.366065), 
-			51.2 , 0.7);
+			51.2 , 0.5);
 	Material jade( Colour(0, 0, 0), Colour(0.54, 0.89, 0.63), 
 			Colour(0.316228, 0.316228, 0.316228), 
-			12.8 ,0.4);
+			12.8 , 0.0);
 
 	
 #if 1
 	// Defines a point light source.
-	raytracer.addLightSource( new PointLight(Point3D(0, 10, 7), 
+	raytracer.addLightSource( new PointLight(Point3D(20, 20, 7), 
 				Colour(0.9, 0.9, 0.9) ) );
 #else
 	// Defines an area light source by randomly creating many point
@@ -461,12 +460,12 @@ int main(int argc, char* argv[])
 #endif
 	
 	// Add a unit square into the scene with material mat.
-	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &gold );
-	SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &jade );
+	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &jade );
+	SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &gold );
 //	SceneDagNode* plane1 = raytracer.addObject( new UnitSquare(), &jade );  // Remove: new plane for testing
 	
 	// Apply some transformations to the unit square.
-	double factor1[3] = { 1.0, 1.3, 1.0 };
+	double factor1[3] = { 1.0, 2.0, 1.0 };
 	double factor2[3] = { 6.0, 6.0, 6.0 };
 	raytracer.translate(sphere, Vector3D(0, 0, -5));	
 	raytracer.rotate(sphere, 'x', -45); 
