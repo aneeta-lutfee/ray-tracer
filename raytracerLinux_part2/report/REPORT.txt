@@ -1,0 +1,8 @@
+Ray Casting: Notes from this site are used:
+
+Square intersection: Notes from this site are used:
+
+Shpere intersection: Notes from textbook page 77 (Ray-shpere intersection) and  http://ray-tracer-concept.blogspot.ca/2011/11/ray-sphere-intersection.html are used. To find the ray intersection with the sphere, the derivation described in the comment below the function signature is used, this derivation is taken from the link provided above. After finding determinant, the value is compared with 0 to find the number of intersections. When there is an intersection, the point is found, and the intersection point and normal are set
+
+Anti-aliasing: used notes from textbook page 180
+To perform anti-aliasing, a pixel is divided up into subpixels, and the rays is sent through the center of these subpixels and the color is averaged afterwards. This is accomplished by accumulating each color (R, G, B) separetely from the returned ray color for these subpixels and dividing them out by the number of subpixels in each pixels, then setting this color to the pixel.

@@ -16,17 +16,18 @@
 #include <iostream>
 #include <cmath>
 
-#define SCENE_SIGNATURE
+//#define SCENE_SIGNATURE
 
 #define TEST_IMAGE
 //#define DOF
 //#define SHADOWS
-//#define REFLECTIONS
+#define REFLECTIONS
+#define GLOSSY
 //#define MOTION_BLUR
 //#define AREA_LIGHT
 
 
-#define TIME_DURATION 1
+#define TIME_DURATION 2
 #define TIME_SLICE 0.1
 
 #ifndef M_PI

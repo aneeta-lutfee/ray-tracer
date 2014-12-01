@@ -261,14 +261,14 @@ Colour Raytracer::shadeRay( Ray3D& ray , int depth) {
 	Colour col(0.0, 0.0, 0.0); 
 	
 #ifndef SCENE_SIGNATURE
-	double time = TIME_DURATION - TIME_SLICE;
+	double time = 0.0;
 	int counter = 0;
 	
 #ifdef MOTION_BLUR
-	time = 0.0;
+	time = TIME_DURATION;
 #endif // END_MOTION_BLUR
 
-	for (; time < TIME_DURATION; time+=TIME_SLICE)
+	for (; time >= 0; time-=TIME_SLICE)
 	{
 		traverseScene(_root, ray, time); 
 		// Don't bother shading if the ray didn't hit 
@@ -276,12 +276,13 @@ Colour Raytracer::shadeRay( Ray3D& ray , int depth) {
 		if (!ray.intersection.none) {
 			computeShading(ray, time); 
 			col = col + ray.col; 
-	#ifdef REFLECTIONS	
+	
 			if (depth < 2)
 			{
+#ifdef REFLECTIONS	
 				// You'll want to call shadeRay recursively (with a different ray, 
 				// of course) here to implement reflection/refraction effects. 
-		#if 1
+		#ifndef GLOSSY
 				// No glossy reflection -- regular reflection
 				Vector3D d = ray.dir;
 				Vector3D n = ray.intersection.normal;
@@ -292,39 +293,49 @@ Colour Raytracer::shadeRay( Ray3D& ray , int depth) {
 
 				col = col + ray.intersection.mat->reflectivity * shadeRay(reflection_ray ,depth + 1);	
 				
-		#else
-				Colour gloss(0,0,0); // glossy reflection
-				for (int i = 0; i < 10; i++) {
-					double delta1 = rand() / (double) RAND_MAX;
-					double delta2 = rand() / (double) RAND_MAX;
-					double theta = acos(pow((1 - delta1), ray.intersection.mat->reflectivity));
-					double phi = 2 * M_PI * delta2;
-					double x = sin(phi) * cos(theta);
-					double y = sin(phi) * sin(theta);
-					double z = cos(phi);
+		#else	
+				//alan's code
+				Vector3D d = ray.dir;
+				Vector3D n = ray.intersection.normal;
+				n.normalize();
+				Vector3D reflected_dir =  d - (2.0) * (d.dot(n)) * n;
+				reflected_dir.normalize(); 
+				Ray3D reflection_ray(ray.intersection.point + 0.00001* reflected_dir, reflected_dir);
+				Colour main_ref_colour = ray.intersection.mat->reflectivity * shadeRay(reflection_ray ,depth + 1);
+				
+				//launch rays randomly, similar code to creating the disk light
+				//reflected_dir is the disk normal
+				double radius = 0.5;
+				Vector3D v, new_ref_dir;
+				Point3D ref_pos, disk_pos;
+				disk_pos = ray.intersection.point + 1 * reflected_dir;
+				int num_rays = 200 * radius * radius;
+				Colour gloss_color(0,0,0);
+				for (int i = 0; i < num_rays; i ++)
+				{
+					v[0] = ((double) rand() / (RAND_MAX)) * radius;
+					v[1] = ((double) rand() / (RAND_MAX)) * radius;
+					v[2] = -(v[0]*reflected_dir[0] + v[1]*reflected_dir[1])/reflected_dir[2];
+					v.normalize();
+					// set the length of v less than radius
+					v = ((double) rand() / (RAND_MAX)) * radius * v;
+				
+					ref_pos = disk_pos + v;
 					
-					Ray3D refRay;
-					Vector3D d = ray.dir;
-					Vector3D n = ray.intersection.normal;
-					n.normalize();
-					Vector3D reflected_dir =  d - (2.0) * (d.dot(n)) * n;
-					reflected_dir.normalize(); 
+					// fire a new reflection ray
+					new_ref_dir = ref_pos - ray.intersection.point;
 					
-					Vector3D u = reflected_dir.cross(ray.intersection.normal);
-					Vector3D v = reflected_dir.cross(u);
-					
-					refRay.dir = x * u + y * v + reflected_dir;
-					refRay.dir.normalize();
-					refRay.origin = ray.origin + 0.00001 * reflected_dir;
-									
-					gloss = gloss + ray.intersection.mat->reflectivity * shadeRay(refRay, depth+1);
+					new_ref_dir.normalize();
+					Ray3D new_reflection_ray(ray.intersection.point + 0.00001* new_ref_dir, new_ref_dir);
+					gloss_color = gloss_color + ray.intersection.mat->reflectivity * shadeRay(new_reflection_ray ,depth + 1);
 				}
-				col = col + gloss;
-		#endif				
-			}
-	#endif	// END_REFLECTIONS		
+				gloss_color = (1.0/(1+num_rays)) * (main_ref_colour + gloss_color);
+				col = col + gloss_color;
 
-			
+		#endif	//END_GLOSSY
+	#endif	// END_REFLECTIONS			
+			}
+		
 		}
 		counter++;
 	}// end of time loop
@@ -458,8 +469,8 @@ int main(int argc, char* argv[])
 	// assignment.  
 	Raytracer raytracer;
 #ifdef TEST_IMAGE
-	int width = 32 * 4; 
-	int height = 24 * 4; 
+	int width = 32 *2; 
+	int height = 24 *2; 
 #else
 	int width = 320; 
 	int height = 240; 
@@ -470,6 +481,8 @@ int main(int argc, char* argv[])
 		height = atoi(argv[2]);
 	}
 
+    // Set random
+    srand( time(0) );
 	// Camera parameters.
 	Point3D eye(0, 0, 1);
 	Vector3D view(0, 0, -1);
@@ -479,10 +492,13 @@ int main(int argc, char* argv[])
 	// Defines a material for shading.
 	Material gold( Colour(0.3, 0.3, 0.3), Colour(0.75164, 0.60648, 0.22648), 
 			Colour(0.628281, 0.555802, 0.366065), 
-			51.2 , 0.8);
+			51.2 , 0.5);
 	Material jade( Colour(0, 0, 0), Colour(0.54, 0.89, 0.63), 
 			Colour(0.316228, 0.316228, 0.316228), 
 			12.8 ,0.3);
+	Material blue( Colour(0, 0, 0), Colour(100.0/255, 149.0/255, 237.0/255), 
+			Colour(0.316228, 0.316228, 0.316228), 
+			12.8 , 0.9);
 
 	
 #ifdef AREA_LIGHT
@@ -490,7 +506,6 @@ int main(int argc, char* argv[])
 	// Defines an area light source by randomly creating many point
 	// light sources around a center location on a plane to simulate
 	// a disk light panel.
-	srand( time(0) );
 	Point3D area_light_position(0, 0, 5);
 	Vector3D area_light_normal(0, 0, -1);
 	Colour area_light_col(0.9, 0.9, 0.9);
@@ -499,7 +514,7 @@ int main(int argc, char* argv[])
 	Point3D light_pos;
 	Vector3D v;
 
-	// scales with teh radius
+	// scales with the radius
 	int num_lights = 6 * radius*radius;
 	for (int i = 0; i < num_lights; i ++)
 	{
@@ -513,14 +528,32 @@ int main(int argc, char* argv[])
 		// create a new point light at light_pos
 		PointLight * newlight = new PointLight(light_pos, area_light_col);
 		raytracer.addLightSource(newlight);
-	} 
+	}
 #else
 	// Defines a point light source.
-	raytracer.addLightSource( new PointLight(Point3D(0, 0, -2), 
+	raytracer.addLightSource( new PointLight(Point3D(0, 5, 5), 
 				Colour(0.9, 0.9, 0.9) ) );
 #endif
+
+#if 1
+
+	// Add a unit square into the scene with material mat.
+	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &gold, Colour(1,1,1));
+	SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &blue, Colour(0,1,0));
+//	SceneDagNode* plane1 = raytracer.addObject( new UnitSquare(), &jade );  // Remove: new plane for testing
 	
-#if 0
+	// Apply some transformations to the unit square.
+	double factor1[3] = { 1.2, 1.2, 1.2 };
+	double factor2[3] = { 6.0, 6.0, 6.0 };
+	raytracer.translate(sphere, Vector3D(0, 0, -5));	
+	raytracer.rotate(sphere, 'x', -45); 
+	raytracer.rotate(sphere, 'z', 45); 
+	raytracer.scale(sphere, Point3D(0, 0, 0), factor1);
+
+	raytracer.translate(plane, Vector3D(0, 0, -7));	
+	raytracer.rotate(plane, 'z', 45); 
+	raytracer.scale(plane, Point3D(0, 0, 0), factor2);
+/*
 	// Apply some transformations to the unit square.
 	double factor1[3] = { 1.0, 1.0, 1.0 };
 	double factor2[3] = { 1.5, 1.5, 1.5 };
@@ -543,22 +576,23 @@ int main(int argc, char* argv[])
 	
 	raytracer.translate(sphere2, Vector3D(-6, -7, -20));
 	raytracer.scale(sphere2, Point3D(0, 0, 0), factor3);
+	*/
 #else
 	// Add a unit square into the scene with material mat.
-	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &gold, Colour(1,0,1));
-	SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &jade, Colour(1,1,0) );
+	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &jade, Colour(1,0,1));
+	SceneDagNode* plane = raytracer.addObject( new UnitSphereStatic(), &blue, Colour(1,1,0) );
 
 //	SceneDagNode* plane1 = raytracer.addObject( new UnitSquare(), &jade );  // Remove: new plane for testing
 	
 	// Apply some transformations to the unit square.
-	double factor1[3] = { 1.0, 2.0, 1.0 };
-	double factor2[3] = { 6.0, 6.0, 6.0 };
+	double factor1[3] = { 1.0, 1.0, 1.0 };
+	double factor2[3] = { 17.0, 17.0, 17.0 };
 	raytracer.translate(sphere, Vector3D(0, 0, -5));	
 	raytracer.rotate(sphere, 'x', -45); 
 	raytracer.rotate(sphere, 'z', 45); 
 	raytracer.scale(sphere, Point3D(0, 0, 0), factor1);
 
-	raytracer.translate(plane, Vector3D(0, 0, -7));	
+	raytracer.translate(plane, Vector3D(0, 0, -25));	
 	raytracer.rotate(plane, 'z', 45); 
 	raytracer.scale(plane, Point3D(0, 0, 0), factor2);
 #endif	
