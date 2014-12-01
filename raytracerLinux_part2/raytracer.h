@@ -36,11 +36,11 @@ struct LightListNode {
 struct SceneDagNode {
 	SceneDagNode() : 
 		obj(NULL), mat(NULL), 
-		next(NULL), parent(NULL), child(NULL){
+		next(NULL), parent(NULL), child(NULL), ID(Colour(1,1,1)){
 	}	
 
 	SceneDagNode( SceneObject* obj, Material* mat) : 
-		obj(obj), mat(mat), next(NULL), parent(NULL), child(NULL) {
+		obj(obj), mat(mat), next(NULL), parent(NULL), child(NULL), ID(Colour(1,1,1)) {
 		}
 	
 	~SceneDagNode() {
@@ -56,6 +56,7 @@ struct SceneDagNode {
 	// geometry from object space to world space and the inverse.
 	Matrix4x4 trans;
 	Matrix4x4 invtrans;
+	Colour ID;
 	
 	// Internal structure of the tree, you shouldn't have to worry 
 	// about them.
@@ -78,8 +79,8 @@ public:
 	// Add an object into the scene, with material mat.  The function
 	// returns a handle to the object node you just added, use the 
 	// handle to apply transformations to the object.
-	SceneDagNode* addObject( SceneObject* obj, Material* mat ) {
-		return addObject(_root, obj, mat);
+	SceneDagNode* addObject( SceneObject* obj, Material* mat, Colour ID) {
+		return addObject(_root, obj, mat, ID);
 	}
 	
 	// Add an object into the scene with a specific parent node, 
@@ -87,7 +88,7 @@ public:
 	// modeling.  You could create nodes with NULL obj and mat, 
 	// in which case they just represent transformations.  
 	SceneDagNode* addObject( SceneDagNode* parent, SceneObject* obj, 
-			Material* mat );
+			Material* mat, Colour ID);
 
 	// Add a light source.
 	LightListNode* addLightSource( LightSource* light);

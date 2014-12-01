@@ -16,7 +16,7 @@
 #include <iostream>
 #include <cmath>
 
-#define SIGNATURE
+#define SCENE_SIGNATURE
 
 #define TEST_IMAGE
 //#define DOF
@@ -24,6 +24,7 @@
 //#define REFLECTIONS
 //#define MOTION_BLUR
 //#define AREA_LIGHT
+
 
 #define TIME_DURATION 1
 #define TIME_SLICE 0.1

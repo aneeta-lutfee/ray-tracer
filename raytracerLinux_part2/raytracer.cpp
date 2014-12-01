@@ -18,10 +18,6 @@
 #include <cstdlib>
 #include "util.h"
 
-Colour ID_1(0,1,0);
-Colour ID_2(0,0,1);
-Colour ID_3(1,0,0);
-
 Raytracer::Raytracer() : _lightSource(NULL) {
 	_root = new SceneDagNode();
 }
@@ -31,11 +27,12 @@ Raytracer::~Raytracer() {
 }
 
 SceneDagNode* Raytracer::addObject( SceneDagNode* parent, 
-		SceneObject* obj, Material* mat ) {
+		SceneObject* obj, Material* mat, Colour ID) {
 	SceneDagNode* node = new SceneDagNode( obj, mat );
 	node->parent = parent;
 	node->next = NULL;
 	node->child = NULL;
+	node->ID = ID;
 	
 	// Add the object to the parent's child list, this means
 	// whatever transformation applied to the parent will also
@@ -170,6 +167,10 @@ void Raytracer::traverseScene( SceneDagNode* node, Ray3D& ray, double time ) {
 		// Perform intersection.
 		if (node->obj->intersect(ray, _worldToModel, _modelToWorld, time)) {
 			ray.intersection.mat = node->mat;
+			
+#ifdef SCENE_SIGNATURE
+			ray.col = node->ID;
+#endif
 		}
 		
 	}
@@ -259,76 +260,82 @@ void Raytracer::flushPixelBuffer( char *file_name ) {
 Colour Raytracer::shadeRay( Ray3D& ray , int depth) {
 	Colour col(0.0, 0.0, 0.0); 
 	
+#ifndef SCENE_SIGNATURE
 	double time = TIME_DURATION - TIME_SLICE;
 	int counter = 0;
 	
 #ifdef MOTION_BLUR
 	time = 0.0;
-#endif
+#endif // END_MOTION_BLUR
 
-for (; time < TIME_DURATION; time+=TIME_SLICE)
-{
-	traverseScene(_root, ray, time); 
-	
-	// Don't bother shading if the ray didn't hit 
-	// anything.
-	if (!ray.intersection.none) {
-		computeShading(ray, time); 
-		col = col + ray.col; 
-#ifdef REFLECTIONS	
-		if (depth < 2)
-		{
-			// You'll want to call shadeRay recursively (with a different ray, 
-			// of course) here to implement reflection/refraction effects. 
-	#if 1
-			// No glossy reflection -- regular reflection
-			Vector3D d = ray.dir;
-			Vector3D n = ray.intersection.normal;
-			n.normalize();
-			Vector3D reflected_dir =  d - (2.0) * (d.dot(n)) * n;
-			reflected_dir.normalize(); 
-			Ray3D reflection_ray(ray.intersection.point + 0.00001* reflected_dir, reflected_dir);
-
-			col = col + ray.intersection.mat->reflectivity * shadeRay(reflection_ray ,depth + 1);	
-			
-	#else
-			Colour gloss(0,0,0); // glossy reflection
-			for (int i = 0; i < 10; i++) {
-				double delta1 = rand() / (double) RAND_MAX;
-				double delta2 = rand() / (double) RAND_MAX;
-				double theta = acos(pow((1 - delta1), ray.intersection.mat->reflectivity));
-				double phi = 2 * M_PI * delta2;
-				double x = sin(phi) * cos(theta);
-				double y = sin(phi) * sin(theta);
-				double z = cos(phi);
-				
-				Ray3D refRay;
+	for (; time < TIME_DURATION; time+=TIME_SLICE)
+	{
+		traverseScene(_root, ray, time); 
+		// Don't bother shading if the ray didn't hit 
+		// anything.
+		if (!ray.intersection.none) {
+			computeShading(ray, time); 
+			col = col + ray.col; 
+	#ifdef REFLECTIONS	
+			if (depth < 2)
+			{
+				// You'll want to call shadeRay recursively (with a different ray, 
+				// of course) here to implement reflection/refraction effects. 
+		#if 1
+				// No glossy reflection -- regular reflection
 				Vector3D d = ray.dir;
 				Vector3D n = ray.intersection.normal;
 				n.normalize();
 				Vector3D reflected_dir =  d - (2.0) * (d.dot(n)) * n;
 				reflected_dir.normalize(); 
-				
-				Vector3D u = reflected_dir.cross(ray.intersection.normal);
-				Vector3D v = reflected_dir.cross(u);
-				
-				refRay.dir = x * u + y * v + reflected_dir;
-				refRay.dir.normalize();
-				refRay.origin = ray.origin + 0.00001 * reflected_dir;
-								
-				gloss = gloss + ray.intersection.mat->reflectivity * shadeRay(refRay, depth+1);
-			}
-			col = col + gloss;
-	#endif				
-		}
-#endif			
+				Ray3D reflection_ray(ray.intersection.point + 0.00001* reflected_dir, reflected_dir);
 
-		
-	}
-	counter++;
-}// end of time loop
+				col = col + ray.intersection.mat->reflectivity * shadeRay(reflection_ray ,depth + 1);	
+				
+		#else
+				Colour gloss(0,0,0); // glossy reflection
+				for (int i = 0; i < 10; i++) {
+					double delta1 = rand() / (double) RAND_MAX;
+					double delta2 = rand() / (double) RAND_MAX;
+					double theta = acos(pow((1 - delta1), ray.intersection.mat->reflectivity));
+					double phi = 2 * M_PI * delta2;
+					double x = sin(phi) * cos(theta);
+					double y = sin(phi) * sin(theta);
+					double z = cos(phi);
+					
+					Ray3D refRay;
+					Vector3D d = ray.dir;
+					Vector3D n = ray.intersection.normal;
+					n.normalize();
+					Vector3D reflected_dir =  d - (2.0) * (d.dot(n)) * n;
+					reflected_dir.normalize(); 
+					
+					Vector3D u = reflected_dir.cross(ray.intersection.normal);
+					Vector3D v = reflected_dir.cross(u);
+					
+					refRay.dir = x * u + y * v + reflected_dir;
+					refRay.dir.normalize();
+					refRay.origin = ray.origin + 0.00001 * reflected_dir;
+									
+					gloss = gloss + ray.intersection.mat->reflectivity * shadeRay(refRay, depth+1);
+				}
+				col = col + gloss;
+		#endif				
+			}
+	#endif	// END_REFLECTIONS		
+
+			
+		}
+		counter++;
+	}// end of time loop
 	col = (1.0/counter) * col;
 	col.clamp();
+
+#else // ELSE_SCENCE_SIGNATURE
+	traverseScene(_root, ray, 0.0);
+	col = ray.col;
+#endif
+
 	return col; 
 }	
 
@@ -513,16 +520,16 @@ int main(int argc, char* argv[])
 				Colour(0.9, 0.9, 0.9) ) );
 #endif
 	
-#if 1
+#if 0
 	// Apply some transformations to the unit square.
 	double factor1[3] = { 1.0, 1.0, 1.0 };
 	double factor2[3] = { 1.5, 1.5, 1.5 };
 	double factor3[3] = { 15, 15, 15};
 	
 	// 3 spheres
-	SceneDagNode* plane = raytracer.addObject( new UnitSphere(), &jade );
-	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &gold );
-	SceneDagNode* sphere2 = raytracer.addObject( new UnitSphere(), &gold );
+	SceneDagNode* plane = raytracer.addObject( new UnitSphere(), &jade, Colour(1,1,1) );
+	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &gold, Colour(0,1,1) );
+	SceneDagNode* sphere2 = raytracer.addObject( new UnitSphere(), &gold, Colour(1,0,1) );
 
 	
 	raytracer.translate(sphere, Vector3D(-3.5, 0, -3.5));	
@@ -538,8 +545,8 @@ int main(int argc, char* argv[])
 	raytracer.scale(sphere2, Point3D(0, 0, 0), factor3);
 #else
 	// Add a unit square into the scene with material mat.
-	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &gold );
-	SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &jade );
+	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &gold, Colour(1,0,1));
+	SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &jade, Colour(1,1,0) );
 
 //	SceneDagNode* plane1 = raytracer.addObject( new UnitSquare(), &jade );  // Remove: new plane for testing
 	
