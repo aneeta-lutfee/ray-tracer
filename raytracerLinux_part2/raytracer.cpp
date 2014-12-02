@@ -333,7 +333,53 @@ Colour Raytracer::shadeRay( Ray3D& ray , int depth) {
 				col = col + gloss_color;
 
 		#endif	//END_GLOSSY
-	#endif	// END_REFLECTIONS			
+	#endif	// END_REFLECTIONS		
+	
+				// ------------- REFRACTION ----------------	
+		#ifdef REFRACTION 
+			Vector3D inDir = ray.dir;
+			inDir.normalize();
+			Vector3D normal = ray.intersection.normal;
+			normal.normalize();
+			
+			double cosTheta1 = inDir.dot(normal);
+			double c1, c2;
+			double nr;
+			Vector3D T, Tout;
+			
+			// air -> object 
+			if (cosTheta1 < 0) {
+				c1 = 1.0; // 
+				c2 = ray.intersection.mat->lightSpeed;
+				nr = c1/c2;
+				float ndotNegv = normal.dot(-inDir);
+				float rootContent = 1.0 - pow(nr, 2) * (1-pow(ndotNegv, 2));
+				if (rootContent >= 0.0) {
+					T = (nr * ndotNegv - sqrt(rootContent)) * normal - (nr * (-inDir));
+					T.normalize();
+					Ray3D refractive(ray.intersection.point + 0.009 * T, T);	
+					Colour refractiveCol = shadeRay(refractive, depth+1);
+					col = col + ray.intersection.mat->refractivity * refractiveCol;
+				} 
+			} else { // object -> air
+				c1 = ray.intersection.mat->lightSpeed;
+				c2 = 1.0;
+				nr = c1/c2;
+				Vector3D matDir = ray.dir;
+				matDir.normalize();
+				Vector3D negN = -normal;
+				negN.normalize();
+				float negNDotNegV = negN.dot(-matDir);
+				float rootContent = 1.0 - pow(nr, 2) * (1 - pow(negNDotNegV, 2));
+				if (rootContent >= 0.0) {
+					Tout = (nr * negNDotNegV - sqrt(rootContent)) * negN - (nr * (-matDir));
+					Tout.normalize();
+					Ray3D refractive1(ray.intersection.point + 0.009 * Tout, Tout);	
+					Colour refractiveCol1 = shadeRay(refractive1, depth+1);
+					col = col + ray.intersection.mat->refractivity * refractiveCol1;
+				}
+			}
+		#endif	
 			}
 		
 		}
@@ -492,13 +538,16 @@ int main(int argc, char* argv[])
 	// Defines a material for shading.
 	Material gold( Colour(0.3, 0.3, 0.3), Colour(0.75164, 0.60648, 0.22648), 
 			Colour(0.628281, 0.555802, 0.366065), 
-			51.2 , 0.5);
+			51.2 , 0.5, 0.0, 0.5);
 	Material jade( Colour(0, 0, 0), Colour(0.54, 0.89, 0.63), 
 			Colour(0.316228, 0.316228, 0.316228), 
-			12.8 ,0.3);
+			12.8 ,0.3, 0.0, 0.5);
 	Material blue( Colour(0, 0, 0), Colour(100.0/255, 149.0/255, 237.0/255), 
 			Colour(0.316228, 0.316228, 0.316228), 
-			12.8 , 0.9);
+			12.8 , 0.9, 0.0, 0.5);
+	Material glass( Colour(0.05, 0.05, 0.05), Colour(0.05, 0.05, 0.05),
+			Colour(0.5, 0.5, 0.5),
+			32, 0.0, 1.5, 1.5); 
 
 	
 #ifdef AREA_LIGHT
@@ -538,19 +587,33 @@ int main(int argc, char* argv[])
 #if 1
 
 	// Add a unit square into the scene with material mat.
-	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &gold, Colour(1,1,1));
+	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &jade, Colour(1,1,1));
+	SceneDagNode* sphere1 = raytracer.addObject( new UnitSphere(), &glass, Colour(1,1,1));
+	SceneDagNode* sphere2 = raytracer.addObject( new UnitSphere(), &gold, Colour(1,1,1));
 	SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &blue, Colour(0,1,0));
 //	SceneDagNode* plane1 = raytracer.addObject( new UnitSquare(), &jade );  // Remove: new plane for testing
 	
 	// Apply some transformations to the unit square.
-	double factor1[3] = { 1.2, 1.2, 1.2 };
-	double factor2[3] = { 6.0, 6.0, 6.0 };
-	raytracer.translate(sphere, Vector3D(0, 0, -5));	
+	double factor1[3] = { 1.0, 1.0, 1.0 };
+	double factor2[3] = { 5.0, 5.0, 5.0 };
+	double factor3[3] = { 2.5, 2.5, 2.5 };
+	raytracer.translate(sphere, Vector3D(-1, 0, -4));	
 	raytracer.rotate(sphere, 'x', -45); 
 	raytracer.rotate(sphere, 'z', 45); 
 	raytracer.scale(sphere, Point3D(0, 0, 0), factor1);
+	
+	raytracer.translate(sphere2, Vector3D(-1, 2, -4));	
+	raytracer.rotate(sphere2, 'x', -45); 
+	raytracer.rotate(sphere2, 'z', 45); 
+	raytracer.scale(sphere2, Point3D(0, 0, 0), factor1);
+	
+	
+	raytracer.translate(sphere1, Vector3D(-1, 1, -3));	
+	raytracer.rotate(sphere1, 'x', -45); 
+	raytracer.rotate(sphere1, 'z', 45); 
+	raytracer.scale(sphere1, Point3D(0, 0, 0), factor3);
 
-	raytracer.translate(plane, Vector3D(0, 0, -7));	
+	raytracer.translate(plane, Vector3D(0, 0, -5));	
 	raytracer.rotate(plane, 'z', 45); 
 	raytracer.scale(plane, Point3D(0, 0, 0), factor2);
 /*
