@@ -18,11 +18,12 @@
 
 //#define SCENE_SIGNATURE
 
-#define TEST_IMAGE
+//#define TEST_IMAGE
 //#define DOF
 //#define SHADOWS
-#define REFLECTIONS
-#define GLOSSY
+//#define REFLECTIONS
+//#define GLOSSY
+#define REFRACTION
 //#define MOTION_BLUR
 //#define AREA_LIGHT
 
@@ -143,9 +144,10 @@ Colour operator +(const Colour& u, const Colour& v);
 std::ostream& operator <<(std::ostream& o, const Colour& c); 
 
 struct Material {
-	Material( Colour ambient, Colour diffuse, Colour specular, double exp, double ref ) :
+	Material( Colour ambient, Colour diffuse, Colour specular, double exp, double ref,
+	double refractivity, double lightSpeed  ) :
 		ambient(ambient), diffuse(diffuse), specular(specular), 
-		specular_exp(exp), reflectivity(ref) {}
+		specular_exp(exp), reflectivity(ref), refractivity(refractivity), lightSpeed(lightSpeed) {}
 	
 	// Ambient components for Phong shading.
 	Colour ambient; 
@@ -155,8 +157,12 @@ struct Material {
 	Colour specular;
 	// Specular expoent.
 	double specular_exp;
-	
+	// Reflective factor of the material
 	double reflectivity;
+	// Refractive factor of the material
+	double refractivity;
+	// Light speed of the material
+	double lightSpeed;	
 };
 
 struct Intersection {
