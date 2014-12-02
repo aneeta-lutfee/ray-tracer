@@ -283,7 +283,7 @@ Colour Raytracer::shadeRay( Ray3D& ray , int depth) {
 				// You'll want to call shadeRay recursively (with a different ray, 
 				// of course) here to implement reflection/refraction effects. 
 		#ifndef GLOSSY
-				// No glossy reflection -- regular reflection
+				// ---------------------- Reflection -------------------
 				Vector3D d = ray.dir;
 				Vector3D n = ray.intersection.normal;
 				n.normalize();
@@ -294,7 +294,7 @@ Colour Raytracer::shadeRay( Ray3D& ray , int depth) {
 				col = col + ray.intersection.mat->reflectivity * shadeRay(reflection_ray ,depth + 1);	
 				
 		#else	
-				//alan's code
+				// ---------------------- Glossy reflection ------------- 
 				Vector3D d = ray.dir;
 				Vector3D n = ray.intersection.normal;
 				n.normalize();
@@ -335,19 +335,19 @@ Colour Raytracer::shadeRay( Ray3D& ray , int depth) {
 		#endif	//END_GLOSSY
 	#endif	// END_REFLECTIONS		
 	
-				// ------------- REFRACTION ----------------	
+		// ------------- REFRACTION ----------------	
 		#ifdef REFRACTION 
 			Vector3D inDir = ray.dir;
 			inDir.normalize();
 			Vector3D normal = ray.intersection.normal;
 			normal.normalize();
 			
-			double cosTheta1 = inDir.dot(normal);
+			double cosTheta1 = inDir.dot(normal); // incident theta
 			double c1, c2;
 			double nr;
 			Vector3D T, Tout;
 			
-			// air -> object 
+			// ray transmisison from air to object 
 			if (cosTheta1 < 0) {
 				c1 = 1.0; // 
 				c2 = ray.intersection.mat->lightSpeed;
@@ -355,13 +355,14 @@ Colour Raytracer::shadeRay( Ray3D& ray , int depth) {
 				float ndotNegv = normal.dot(-inDir);
 				float rootContent = 1.0 - pow(nr, 2) * (1-pow(ndotNegv, 2));
 				if (rootContent >= 0.0) {
+					// Find refracted ray
 					T = (nr * ndotNegv - sqrt(rootContent)) * normal - (nr * (-inDir));
 					T.normalize();
 					Ray3D refractive(ray.intersection.point + 0.009 * T, T);	
 					Colour refractiveCol = shadeRay(refractive, depth+1);
 					col = col + ray.intersection.mat->refractivity * refractiveCol;
 				} 
-			} else { // object -> air
+			} else { // ray transmisison from object to air 
 				c1 = ray.intersection.mat->lightSpeed;
 				c2 = 1.0;
 				nr = c1/c2;
@@ -372,6 +373,7 @@ Colour Raytracer::shadeRay( Ray3D& ray , int depth) {
 				float negNDotNegV = negN.dot(-matDir);
 				float rootContent = 1.0 - pow(nr, 2) * (1 - pow(negNDotNegV, 2));
 				if (rootContent >= 0.0) {
+					// Find refracted ray
 					Tout = (nr * negNDotNegV - sqrt(rootContent)) * negN - (nr * (-matDir));
 					Tout.normalize();
 					Ray3D refractive1(ray.intersection.point + 0.009 * Tout, Tout);	
@@ -379,7 +381,7 @@ Colour Raytracer::shadeRay( Ray3D& ray , int depth) {
 					col = col + ray.intersection.mat->refractivity * refractiveCol1;
 				}
 			}
-		#endif	
+		#endif	// End refraction
 			}
 		
 		}
@@ -433,10 +435,6 @@ void Raytracer::render( int width, int height, Point3D eye, Vector3D view,
 					imagePlane[1] = (-double(height)/2 + sub_yy + i)/factor;
 					imagePlane[2] = -1;
 
-								
-					// TODO: Convert ray to world space and call 
-					// shadeRay(ray) to generate pixel colour. 	
-					
 					Ray3D ray;
 					//alanwu: filling the origin and the direction of the ray
 					ray.origin = viewToWorld * (imagePlane);
@@ -547,7 +545,7 @@ int main(int argc, char* argv[])
 			12.8 , 0.9, 0.0, 0.5);
 	Material glass( Colour(0.05, 0.05, 0.05), Colour(0.05, 0.05, 0.05),
 			Colour(0.5, 0.5, 0.5),
-			32, 0.0, 1.5, 1.5); 
+			32, 0.0, 1.5, 0.5); 
 
 	
 #ifdef AREA_LIGHT
@@ -596,7 +594,7 @@ int main(int argc, char* argv[])
 	// Apply some transformations to the unit square.
 	double factor1[3] = { 1.0, 1.0, 1.0 };
 	double factor2[3] = { 5.0, 5.0, 5.0 };
-	double factor3[3] = { 2.5, 2.5, 2.5 };
+	double factor3[3] = { 1.5, 1.5, 1.5 };
 	raytracer.translate(sphere, Vector3D(-1, 0, -4));	
 	raytracer.rotate(sphere, 'x', -45); 
 	raytracer.rotate(sphere, 'z', 45); 
@@ -607,12 +605,11 @@ int main(int argc, char* argv[])
 	raytracer.rotate(sphere2, 'z', 45); 
 	raytracer.scale(sphere2, Point3D(0, 0, 0), factor1);
 	
-	
-	raytracer.translate(sphere1, Vector3D(-1, 1, -3));	
+	raytracer.translate(sphere1, Vector3D(0, 1, -2));	
 	raytracer.rotate(sphere1, 'x', -45); 
 	raytracer.rotate(sphere1, 'z', 45); 
 	raytracer.scale(sphere1, Point3D(0, 0, 0), factor3);
-
+	
 	raytracer.translate(plane, Vector3D(0, 0, -5));	
 	raytracer.rotate(plane, 'z', 45); 
 	raytracer.scale(plane, Point3D(0, 0, 0), factor2);

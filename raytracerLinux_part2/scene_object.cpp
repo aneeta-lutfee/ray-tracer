@@ -65,16 +65,6 @@ bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 
 bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 		const Matrix4x4& modelToWorld, double time ) {
-	// TODO: implement intersection code for UnitSphere, which is centred 
-	// on the origin.  
-	//
-	// Your goal here is to fill ray.intersection with correct values
-	// should an intersection occur.  This includes intersection.point, 
-	// intersection.normal, intersection.none, intersection.t_value.   
-	//
-	// HINT: Remember to first transform the ray into object space  
-	// to simplify the intersection test.
-	
 
 	/* This derivation is taken from textbook page: 76 and
 	 * http://ray-tracer-concept.blogspot.ca/2011/11/ray-sphere-intersection.html
@@ -109,8 +99,6 @@ bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	 * 
 	 * */		
 	
-	//double time = double (rand())/(RAND_MAX);
-	//Point3D sphereOrigin(0,0,0);
 	Point3D sphereOrigin(time, 0, 0);
 	float lambda;
 	
@@ -119,65 +107,55 @@ bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	
 	// Transform origin point to object space
 	Point3D t_origin = worldToModel * ray.origin;
-	Vector3D t_origin_v = Vector3D(t_origin[0] - sphereOrigin[0], 
-								   t_origin[1] - sphereOrigin[1],
-								   t_origin[2] - sphereOrigin[2]);
+	Vector3D t_origin_v = t_origin - sphereOrigin;
 
+	// Calculate the values of a, b, c, q to substitute in the equation
 	float a = t_dir.dot(t_dir); 
-	float b = (t_dir.dot(t_origin_v));
-	float c = (t_origin_v.dot(t_origin_v)) - 1;
+	float b = t_dir.dot(t_origin_v);
+	float c = t_origin_v.dot(t_origin_v) - 1;
 	float q = pow(b, 2) - (a * c);
 	
-	if (q >= 0) // There is intersection
+	if (q < 0) // There is no intersection
 	{
-		// Intersection points 
+		return false;
+	} else { // There is intersection
+		
+		// Find lambda at the Intersection points 
 		float front_lambda = (-b + sqrt(q)) / a; 
 		float back_lambda = (-b - sqrt(q)) / a;
 		
-		lambda = front_lambda;
-		if (back_lambda >= 0)
-			lambda = back_lambda;
-		else 
+		// Set lambda values
+		if (front_lambda < 0 && back_lambda < 0) // hits are behind the view plane
 			return false;
-
+		else if (front_lambda > 0 && back_lambda < 0) // front_lambda is a valid hit
+			lambda = front_lambda;
+		else  // 2 valid hits, smallest lambda gives intersection closest to camera
+			lambda = std::min(front_lambda, back_lambda);
+		}
+		if (lambda < 0.01){
+			return false;
+		}
+		// There is already a closer intersection
 		if ((!ray.intersection.none) && (lambda > ray.intersection.t_value))
 		{
-			// put the ray back to world coordinates
-			ray.dir = modelToWorld * ray.dir;
-			ray.origin = modelToWorld * ray.origin;
 			return false;
 		}	
 
 		// intersection point p(lambda) = c + lambda(pw - c)
-		Vector3D intersection_v = t_origin_v + (lambda * t_dir);
-		Point3D intersection_p = Point3D(intersection_v[0], 
-										intersection_v[1],
-										intersection_v[2]);
-										
-		ray.intersection.point = modelToWorld * intersection_p;
+		Point3D intersection_p = t_origin + lambda * t_dir;										
+		ray.intersection.point = modelToWorld * intersection_p; 
 		
 		// The unit normal is (p-c)/R = intersection point
-		ray.intersection.normal = transNorm(worldToModel, intersection_v);
+		Vector3D normal = intersection_p - sphereOrigin;
+		ray.intersection.normal = modelToWorld * normal;
+		ray.intersection.normal.normalize();
 		ray.intersection.t_value  = lambda;
 		ray.intersection.none = false;
 		return true;
-	}
-	return false;
 }
 
 bool UnitSphereStatic::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 		const Matrix4x4& modelToWorld, double time ) {
-	// TODO: implement intersection code for UnitSphere, which is centred 
-	// on the origin.  
-	//
-	// Your goal here is to fill ray.intersection with correct values
-	// should an intersection occur.  This includes intersection.point, 
-	// intersection.normal, intersection.none, intersection.t_value.   
-	//
-	// HINT: Remember to first transform the ray into object space  
-	// to simplify the intersection test.
-	
-
 	/* This derivation is taken from textbook page: 76 and
 	 * http://ray-tracer-concept.blogspot.ca/2011/11/ray-sphere-intersection.html
 	 * 
@@ -210,9 +188,7 @@ bool UnitSphereStatic::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	 * Roots are: (-b +- sqrt(d))/a
 	 * 
 	 * */		
-	
-	//double time = double (rand())/(RAND_MAX);
-	//Point3D sphereOrigin(0,0,0);
+
 	Point3D sphereOrigin(0, 0, 0);
 	float lambda;
 	
