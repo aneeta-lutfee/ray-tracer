@@ -63,6 +63,8 @@ bool UnitSquare::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 	return false;
 }
 
+#if 1
+//Anita's code
 bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 		const Matrix4x4& modelToWorld, double time ) {
 
@@ -154,6 +156,86 @@ bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 		return true;
 }
 
+#else
+bool UnitSphere::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
+		const Matrix4x4& modelToWorld, double time ) {
+	// TODO: implement intersection code for UnitSphere, which is centred 
+	// on the origin.  
+	//
+	// Your goal here is to fill ray.intersection with correct values
+	// should an intersection occur.  This includes intersection.point, 
+	// intersection.normal, intersection.none, intersection.t_value.   
+	//
+	// HINT: Remember to first transform the ray into object space  
+	// to simplify the intersection test.
+	
+	Point3D rayOrigin = worldToModel * ray.origin;
+
+		Vector3D rayDir = worldToModel * ray.dir;
+		Point3D sphereOrigin(time,0,0);
+		double lambdaStar;
+		//std::cout << "ray origin is " << rayOrigin << "\n";
+		//std::cout << "ray direction is " << rayDir << "\n";
+
+		double A = rayDir.dot(rayDir);
+		double B = (rayOrigin-sphereOrigin).dot(rayDir);
+		double C = (rayOrigin-sphereOrigin).dot(rayOrigin-sphereOrigin) - 1;
+		double D = B*B-A*C;
+
+		//std::cout << "A, B, C, D are "<< A << "," << B << "," << C << "," << D << "\n";
+		if (D<0)
+		{
+			return false;
+		}else if(D*D < 0.00001){
+			double lambda = -B/A;
+			if (((lambda-0)*(lambda-0)) < 0.00001){
+				return false;
+			}else{
+				lambdaStar = lambda;
+			}
+		}
+		else
+		{
+			double lambda_1 = -B/A + sqrt(D) / A;
+			double lambda_2 = -B/A - sqrt(D) / A;
+			//std::cout << "lambda1  "<< lambda_1 << " lambda2 " << lambda_2 << "\n";
+			if (lambda_1 < 0 && lambda_2 < 0)
+			{
+				return false;
+			}
+			else if (lambda_1 > 0 && lambda_2 < 0)
+			{
+				lambdaStar = lambda_1;
+			}
+			else
+			{
+				lambdaStar = lambda_2;
+			}
+		}
+		if (lambdaStar < 0.01){
+			return false;
+		}
+		Point3D intersectionPoint = rayOrigin + lambdaStar * rayDir;
+		Vector3D normal = intersectionPoint - sphereOrigin;
+
+		if (!ray.intersection.none && lambdaStar > ray.intersection.t_value){
+			return false;
+		}
+		ray.intersection.point = modelToWorld * intersectionPoint;
+		//std::cout << "ray origin " << ray.origin << "\n";
+		//std::cout << "intersection point " << ray.intersection.point << "\n";
+		/*if ((ray.origin - ray.intersection.point).length() < 0.0001){
+			return false;
+		}*/
+		ray.intersection.normal = modelToWorld * normal;
+		ray.intersection.normal.normalize();
+		ray.intersection.t_value = lambdaStar;
+		ray.intersection.none = false;
+		return true;
+
+	//return false;
+}
+#endif
 bool UnitSphereStatic::intersect( Ray3D& ray, const Matrix4x4& worldToModel,
 		const Matrix4x4& modelToWorld, double time ) {
 	/* This derivation is taken from textbook page: 76 and

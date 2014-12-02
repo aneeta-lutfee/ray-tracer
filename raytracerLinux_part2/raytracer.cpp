@@ -210,7 +210,7 @@ void Raytracer::computeShading( Ray3D& ray, double time ) {
 		shadowRay.intersection.none = true;
 		
 		traverseScene(_root, shadowRay, time); 
-		if (shadowRay.intersection.none)
+		if (shadowRay.intersection.none || shadowRay.intersection.mat->refractivity != 0.0)
 		{
 			// shade only if the light shines the intersection
 			curLight->light->shade(lightRay);
@@ -337,48 +337,51 @@ Colour Raytracer::shadeRay( Ray3D& ray , int depth) {
 	
 		// ------------- REFRACTION ----------------	
 		#ifdef REFRACTION 
-			Vector3D inDir = ray.dir;
-			inDir.normalize();
-			Vector3D normal = ray.intersection.normal;
-			normal.normalize();
-			
-			double cosTheta1 = inDir.dot(normal); // incident theta
-			double c1, c2;
-			double nr;
-			Vector3D T, Tout;
-			
-			// ray transmisison from air to object 
-			if (cosTheta1 < 0) {
-				c1 = 1.0; // 
-				c2 = ray.intersection.mat->lightSpeed;
-				nr = c1/c2;
-				float ndotNegv = normal.dot(-inDir);
-				float rootContent = 1.0 - pow(nr, 2) * (1-pow(ndotNegv, 2));
-				if (rootContent >= 0.0) {
-					// Find refracted ray
-					T = (nr * ndotNegv - sqrt(rootContent)) * normal - (nr * (-inDir));
-					T.normalize();
-					Ray3D refractive(ray.intersection.point + 0.009 * T, T);	
-					Colour refractiveCol = shadeRay(refractive, depth+1);
-					col = col + ray.intersection.mat->refractivity * refractiveCol;
-				} 
-			} else { // ray transmisison from object to air 
-				c1 = ray.intersection.mat->lightSpeed;
-				c2 = 1.0;
-				nr = c1/c2;
-				Vector3D matDir = ray.dir;
-				matDir.normalize();
-				Vector3D negN = -normal;
-				negN.normalize();
-				float negNDotNegV = negN.dot(-matDir);
-				float rootContent = 1.0 - pow(nr, 2) * (1 - pow(negNDotNegV, 2));
-				if (rootContent >= 0.0) {
-					// Find refracted ray
-					Tout = (nr * negNDotNegV - sqrt(rootContent)) * negN - (nr * (-matDir));
-					Tout.normalize();
-					Ray3D refractive1(ray.intersection.point + 0.009 * Tout, Tout);	
-					Colour refractiveCol1 = shadeRay(refractive1, depth+1);
-					col = col + ray.intersection.mat->refractivity * refractiveCol1;
+			if (ray.intersection.mat->refractivity)
+			{
+				Vector3D inDir = ray.dir;
+				inDir.normalize();
+				Vector3D normal = ray.intersection.normal;
+				normal.normalize();
+				
+				double cosTheta1 = inDir.dot(normal); // incident theta
+				double c1, c2;
+				double nr;
+				Vector3D T, Tout;
+				
+				// ray transmisison from air to object 
+				if (cosTheta1 < 0) {
+					c1 = 1.0; // 
+					c2 = ray.intersection.mat->lightSpeed;
+					nr = c1/c2;
+					float ndotNegv = normal.dot(-inDir);
+					float rootContent = 1.0 - pow(nr, 2) * (1-pow(ndotNegv, 2));
+					if (rootContent >= 0.0) {
+						// Find refracted ray
+						T = (nr * ndotNegv - sqrt(rootContent)) * normal - (nr * (-inDir));
+						T.normalize();
+						Ray3D refractive(ray.intersection.point + 0.009 * T, T);	
+						Colour refractiveCol = shadeRay(refractive, depth+1);
+						col = col + ray.intersection.mat->refractivity * refractiveCol;
+					} 
+				} else { // ray transmisison from object to air 
+					c1 = ray.intersection.mat->lightSpeed;
+					c2 = 1.0;
+					nr = c1/c2;
+					Vector3D matDir = ray.dir;
+					matDir.normalize();
+					Vector3D negN = -normal;
+					negN.normalize();
+					float negNDotNegV = negN.dot(-matDir);
+					float rootContent = 1.0 - pow(nr, 2) * (1 - pow(negNDotNegV, 2));
+					if (rootContent >= 0.0) {
+						// Find refracted ray
+						Tout = (nr * negNDotNegV - sqrt(rootContent)) * negN - (nr * (-matDir));
+						Tout.normalize();
+						Ray3D refractive1(ray.intersection.point + 0.009 * Tout, Tout);	
+						Colour refractiveCol1 = shadeRay(refractive1, depth+1);
+						col = col + ray.intersection.mat->refractivity * refractiveCol1;
+					}
 				}
 			}
 		#endif	// End refraction
@@ -513,8 +516,8 @@ int main(int argc, char* argv[])
 	// assignment.  
 	Raytracer raytracer;
 #ifdef TEST_IMAGE
-	int width = 32 *2; 
-	int height = 24 *2; 
+	int width = 32 *4; 
+	int height = 24 *4; 
 #else
 	int width = 320; 
 	int height = 240; 
@@ -545,11 +548,10 @@ int main(int argc, char* argv[])
 			12.8 , 0.9, 0.0, 0.5);
 	Material glass( Colour(0.05, 0.05, 0.05), Colour(0.05, 0.05, 0.05),
 			Colour(0.5, 0.5, 0.5),
-			32, 0.0, 1.5, 0.5); 
+			32, 0.0, 0.9, 1.2); 
 
 	
 #ifdef AREA_LIGHT
-
 	// Defines an area light source by randomly creating many point
 	// light sources around a center location on a plane to simulate
 	// a disk light panel.
@@ -586,9 +588,12 @@ int main(int argc, char* argv[])
 
 	// Add a unit square into the scene with material mat.
 	SceneDagNode* sphere = raytracer.addObject( new UnitSphere(), &jade, Colour(1,1,1));
+	
+#ifdef REFRACTION
 	SceneDagNode* sphere1 = raytracer.addObject( new UnitSphere(), &glass, Colour(1,1,1));
-	SceneDagNode* sphere2 = raytracer.addObject( new UnitSphere(), &gold, Colour(1,1,1));
-	SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &blue, Colour(0,1,0));
+#endif
+	SceneDagNode* sphere2 = raytracer.addObject( new UnitSphere(), &blue, Colour(1,1,1));
+	SceneDagNode* plane = raytracer.addObject( new UnitSquare(), &gold, Colour(0,1,0));
 //	SceneDagNode* plane1 = raytracer.addObject( new UnitSquare(), &jade );  // Remove: new plane for testing
 	
 	// Apply some transformations to the unit square.
@@ -605,11 +610,12 @@ int main(int argc, char* argv[])
 	raytracer.rotate(sphere2, 'z', 45); 
 	raytracer.scale(sphere2, Point3D(0, 0, 0), factor1);
 	
+#ifdef REFRACTION
 	raytracer.translate(sphere1, Vector3D(0, 1, -2));	
 	raytracer.rotate(sphere1, 'x', -45); 
 	raytracer.rotate(sphere1, 'z', 45); 
-	raytracer.scale(sphere1, Point3D(0, 0, 0), factor3);
-	
+	raytracer.scale(sphere1, Point3D(0, 0, 0), factor1);
+#endif
 	raytracer.translate(plane, Vector3D(0, 0, -5));	
 	raytracer.rotate(plane, 'z', 45); 
 	raytracer.scale(plane, Point3D(0, 0, 0), factor2);

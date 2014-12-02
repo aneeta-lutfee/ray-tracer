@@ -245,7 +245,7 @@ void Raytracer::render( int width, int height, Point3D eye, Vector3D view,
 	initPixelBuffer();
 	viewToWorld = initInvViewMatrix(eye, view, up);
 
-#if 0 
+#if 1
 //----------- This is the anti-aliasing code -------------------
 	// Construct a ray for each pixel.
 	for (int i = 0; i < _scrHeight; i++) {
@@ -338,7 +338,7 @@ int main(int argc, char* argv[])
 	// change this if you're just implementing part one of the 
 	// assignment.  
 	Raytracer raytracer;
-#if 0
+#if 1
 	int width = 320; 
 	int height = 240; 
 #else

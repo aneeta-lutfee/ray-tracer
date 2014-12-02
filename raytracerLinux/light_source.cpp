@@ -14,7 +14,7 @@
 // Enums for rendering mode
 enum RenderMode {Phong, Signature, DiffuseAndAmibient};
 
-RenderMode my_render_mode = DiffuseAndAmibient;
+RenderMode my_render_mode = Phong;
 
 void PointLight::shade( Ray3D& ray ) {
 	// TODO: implement this function to fill in values for ray.col 

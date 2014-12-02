@@ -20,7 +20,7 @@
 
 //#define TEST_IMAGE
 //#define DOF
-//#define SHADOWS
+#define SHADOWS
 //#define REFLECTIONS
 //#define GLOSSY
 #define REFRACTION
